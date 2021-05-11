@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "114152206450",
+    "project_id": "spektrum-f9f8c",
+    "storage_bucket": "spektrum-f9f8c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:114152206450:android:d4a477a25091ece80192eb",
+        "android_client_info": {
+          "package_name": "com.milesgrey.spektrum"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "114152206450-f835oeqkau6j476gtugv2prn2ujbt168.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4dKN2_tbT6FT7cuYPfBrot-Cghc54ReE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "114152206450-f835oeqkau6j476gtugv2prn2ujbt168.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
