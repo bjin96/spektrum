@@ -1,27 +1,15 @@
-import 'dart:typed_data';
-
-import 'package:flutter/services.dart';
-import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
-import 'dart:io' as io;
-
+import 'package:postgres/postgres.dart';
 
 class SpektrumDatabase {
 
-  static const String DATABASE_FILE_NAME = 'spektrum.db';
-  static bool dbIsCopied = false;
+  static const String HOST = 'db-spektrum-do-user-4221323-0.b.db.ondigitalocean.com';
+  static const int PORT = 25060;
+  static const String DATABASE_NAME = 'defaultdb';
+  static const String USERNAME = 'doadmin';
+  static const String PASSWORD = 'p3stzq1xpfhnmdlr';
+  static const bool USE_SSL = true;
 
-  static Future<Database> getDatabase() async {
-    String dbPath = join(await getDatabasesPath(), DATABASE_FILE_NAME);
-    if (!dbIsCopied) {
-      ByteData data = await rootBundle.load(join("assets", DATABASE_FILE_NAME));
-      List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-      await io.File(dbPath).writeAsBytes(bytes, flush: true);
-      dbIsCopied = true;
-    }
-    return openDatabase(
-      dbPath,
-      singleInstance: false,
-    );
+  static PostgreSQLConnection getDatabaseConnection() {
+    return PostgreSQLConnection(HOST, PORT, DATABASE_NAME, username: USERNAME, password: PASSWORD, useSSL: USE_SSL);
   }
 }

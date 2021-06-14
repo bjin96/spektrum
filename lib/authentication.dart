@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:spektrum/contacts.dart';
 
-import 'game.dart';
 
 class AuthenticationPage extends StatefulWidget {
   const AuthenticationPage({Key key}) : super(key: key);
@@ -21,16 +21,24 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
 
   void registerUser() async {
     if (_formKey.currentState.validate()) {
-      print(_mail);
-      print(_password);
       try {
-        UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
             email: _mail.text,
             password: _password.text
         );
+        await SpektrumUser(
+          userId: _mail.text,
+          userName: _mail.text,
+          contactList: <String>[],
+          friendRequestList: <String>[],
+          pendingFriendRequestList: <String>[],
+          challengeList: <String>[],
+          challengeSentList: <String>[],
+          openGameList: <String>[],
+        ).createUser();
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => GamePage(title: 'spektrum')),
+          MaterialPageRoute(builder: (context) => ContactPage()),
         );
       } on FirebaseAuthException catch (e) {
         if (e.code == 'weak-password') {
@@ -47,13 +55,13 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
   void signIn() async {
     if (_formKey.currentState.validate()) {
       try {
-        UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _mail.text,
           password: _password.text,
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => GamePage(title: 'spektrum')),
+          MaterialPageRoute(builder: (context) => ContactPage()),
         );
       } on FirebaseAuthException catch (e) {
         if (e.code == 'user-not-found') {

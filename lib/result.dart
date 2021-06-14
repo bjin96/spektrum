@@ -1,10 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:postgres/postgres.dart';
 import 'package:spektrum/authentication.dart';
-import 'package:sqflite/sqflite.dart';
 
+import 'contacts.dart';
 import 'database.dart';
-import 'game.dart';
 
 class ResultPage extends StatelessWidget {
   final int gameId;
@@ -29,8 +29,7 @@ class ResultPage extends StatelessWidget {
                   for (Result result in snapshot.data) {
                     totalDistance += result.distance;
                   }
-                  return Text(
-                      'Du warst ${totalDistance.toStringAsFixed(2)} von den korrekten Parteien entfernt.');
+                  return Text('Du warst ${totalDistance.toStringAsFixed(2)} von den korrekten Parteien entfernt.');
                 } else {
                   return SizedBox(
                     child: CircularProgressIndicator(),
@@ -42,13 +41,13 @@ class ResultPage extends StatelessWidget {
             ),
             ElevatedButton(
                 onPressed: () {
-                  Navigator.pushReplacement(
+                  Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => GamePage(title: 'Spektrum')),
+                    MaterialPageRoute(
+                        builder: (context) => ContactPage()),
                   );
                 },
-                child: Text('Nochmal spielen')
-            ),
+                child: Text('Kontakte')),
             ElevatedButton(
                 onPressed: () async {
                   await FirebaseAuth.instance.signOut();
@@ -57,8 +56,7 @@ class ResultPage extends StatelessWidget {
                     MaterialPageRoute(builder: (context) => AuthenticationPage()),
                   );
                 },
-                child: Text('Abmelden')
-            ),
+                child: Text('Abmelden')),
           ],
         ),
       ),
@@ -68,59 +66,57 @@ class ResultPage extends StatelessWidget {
 
 class Result {
   int gameId;
-  int userId;
-  String speechId;
-  int fragment;
+  int excerptCounter;
+  String userId;
   int socioCulturalCoordinate;
   int socioEconomicCoordinate;
   double distance;
 
   Result(
       {this.gameId,
+      this.excerptCounter,
       this.userId,
-      this.speechId,
-      this.fragment,
       this.socioCulturalCoordinate,
       this.socioEconomicCoordinate,
       this.distance});
 
   static Future<List<Result>> fetchResultsByGameId(int gameId) async {
-    final Database db = await SpektrumDatabase.getDatabase();
-
-    final List<Map<String, dynamic>> maps = await db.rawQuery('''
-      SELECT game_id, user_id, speech_id, fragment, socio_cultural_coordinate, socio_economic_coordinate, distance
+    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
+    await connection.open();
+    final List<Map<String, dynamic>> maps = await connection.mappedResultsQuery('''
+      SELECT game_id, user_id, socio_cultural_coordinate, socio_economic_coordinate, distance
       FROM result
-      WHERE game_id = ?;
-      ''', [gameId]);
+      WHERE game_id = @gameId;
+      ''', substitutionValues: {'gameId': gameId});
+    connection.close();
     return List.generate(maps.length, (i) {
       return Result(
-        gameId: maps[i]['game_id'],
-        userId: maps[i]['user_id'],
-        speechId: maps[i]['speech_id'],
-        fragment: maps[i]['fragment'],
-        socioCulturalCoordinate: maps[i]['socio_cultural_coordinate'],
-        socioEconomicCoordinate: maps[i]['socio_economic_coordinate'],
-        distance: maps[i]['distance'],
+        gameId: maps[i]['result']['game_id'],
+        excerptCounter: maps[i]['result']['excerpt_counter'],
+        userId: maps[i]['result']['user_id'],
+        socioCulturalCoordinate: maps[i]['result']['socio_cultural_coordinate'],
+        socioEconomicCoordinate: maps[i]['result']['socio_economic_coordinate'],
+        distance: maps[i]['result']['distance'],
       );
     });
   }
 
-  static Future<int> getNewGameId() async {
-    final Database db = await SpektrumDatabase.getDatabase();
-
-    final List<Map<String, dynamic>> maps = await db.rawQuery('''
-      SELECT max(game_id)
-      FROM result;
-      ''');
-    return (maps[0]['max(game_id)'] ?? 0) + 1;
-  }
-
   void store() async {
-    final Database db = await SpektrumDatabase.getDatabase();
-
-    await db.rawQuery('''
-      INSERT INTO result
-      VALUES (?, ?, ?, ?, ?, ?, ?);
-      ''', [gameId, userId, speechId, fragment, socioCulturalCoordinate, socioEconomicCoordinate, distance]);
+    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
+    await connection.open();
+    await connection.query('''
+        INSERT INTO result (
+          game_id, excerpt_counter, user_id, socio_cultural_coordinate, socio_economic_coordinate, distance
+        )
+        VALUES (@gameId, @excerptCounter, @userId, @socioCulturalCoordinate, @socioEconomicCoordinate, @distance);
+        ''', substitutionValues: {
+      'gameId': gameId,
+      'excerptCounter': excerptCounter,
+      'userId': userId,
+      'socioCulturalCoordinate': socioCulturalCoordinate,
+      'socioEconomicCoordinate': socioEconomicCoordinate,
+      'distance': distance,
+    });
+    connection.close();
   }
 }

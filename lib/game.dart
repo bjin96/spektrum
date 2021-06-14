@@ -1,27 +1,35 @@
 import 'dart:math';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:spektrum/result.dart';
 
 import 'excerpt.dart';
 
 class GamePage extends StatefulWidget {
-  GamePage({Key key, this.title}) : super(key: key);
+  GamePage({Key key, this.title, this.opponent}) : super(key: key);
 
   final String title;
+  final String opponent;
 
   @override
-  _GamePage createState() => _GamePage();
+  _GamePage createState() => _GamePage(opponent: opponent);
 }
 
 class _GamePage extends State<GamePage> {
   PageController _pageController = PageController();
   List<Excerpt> _excerptList;
+  List<Result> _resultList;
   int _gameId;
+  final String opponent;
+
+  _GamePage({this.opponent});
 
   Future<bool> fetchGameData() async {
-    _excerptList = await Excerpt.getRandomExcerptList();
-    _gameId = await Result.getNewGameId();
+    _gameId = await Excerpt.getGameId(FirebaseAuth.instance.currentUser.email, opponent);
+    _excerptList = await Excerpt.getExcerptListForGame(_gameId);
+    _resultList = await Result.fetchResultsByGameId(_gameId);
     return true;
   }
 
@@ -45,8 +53,9 @@ class _GamePage extends State<GamePage> {
             builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
               if (snapshot.hasData) {
                 return MyHomePage(
-                  title: 'Page 1',
+                  title: 'Auszug 1',
                   excerpt: _excerptList[0],
+                  result: _resultList.length > 0 ? _resultList[0] : null,
                   gameId: _gameId,
                 );
               } else {
@@ -65,8 +74,9 @@ class _GamePage extends State<GamePage> {
             builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
               if (snapshot.hasData) {
                 return MyHomePage(
-                  title: 'Page 2',
+                  title: 'Auszug 2',
                   excerpt: _excerptList[1],
+                  result: _resultList.length > 1 ? _resultList[1] : null,
                   gameId: _gameId,
                 );
               } else {
@@ -85,8 +95,9 @@ class _GamePage extends State<GamePage> {
             builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
               if (snapshot.hasData) {
                 return MyHomePage(
-                  title: 'Page 3',
+                  title: 'Auszug 3',
                   excerpt: _excerptList[2],
+                  result: _resultList.length > 2 ? _resultList[2] : null,
                   gameId: _gameId,
                 );
               } else {
@@ -123,24 +134,36 @@ class _GamePage extends State<GamePage> {
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key key, this.title, this.excerpt, this.gameId}) : super(key: key);
+  const MyHomePage({Key key, this.title, this.excerpt, this.gameId, this.result}) : super(key: key);
 
   final String title;
   final Excerpt excerpt;
+  final Result result;
   final int gameId;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState(excerpt: excerpt, gameId: gameId);
+  _MyHomePageState createState() => _MyHomePageState(excerpt, gameId, result);
 }
 
 class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMixin<MyHomePage> {
   Excerpt excerpt;
   bool _showCorrection = false;
   int gameId;
+  Result result;
   double _currentSocioEconomicValue = 0;
   double _currentSocioCulturalValue = 0;
 
-  _MyHomePageState({this.excerpt, this.gameId});
+  _MyHomePageState(Excerpt excerpt, int gameId, Result result) {
+    this.excerpt = excerpt;
+    this.gameId = gameId;
+    this.result = result;
+
+    if (result != null) {
+      _showCorrection = true;
+      _currentSocioEconomicValue = result.socioEconomicCoordinate.toDouble();
+      _currentSocioCulturalValue = result.socioCulturalCoordinate.toDouble();
+    }
+  }
 
   @override
   bool get wantKeepAlive => true;
@@ -150,13 +173,12 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
         pow(_currentSocioEconomicValue - excerpt.socioEconomicCoordinate, 2));
   }
 
-  Function onSubmitExcerpt() {
+  Function onSubmitExcerpt(int excerptCounter) {
     void _onSubmitExcerpt() {
       Result(
         gameId: gameId,
-        userId: 0,
-        speechId: excerpt.speechId,
-        fragment: excerpt.fragment,
+        excerptCounter: excerptCounter,
+        userId: FirebaseAuth.instance.currentUser.email,
         socioCulturalCoordinate: _currentSocioCulturalValue.toInt(),
         socioEconomicCoordinate: _currentSocioEconomicValue.toInt(),
         distance: calculateEuclideanDistance(),
@@ -173,32 +195,55 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
       body: GridView.count(
         crossAxisCount: 1,
         children: <Widget>[
           Center(
-            child: Center(
-              child: Container(
-                child: Card(
-                  child: Padding(
-                    child: SingleChildScrollView(
-                      child: Text(
-                        excerpt.content,
-                        textScaleFactor: 1.15,
-                      ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Center(
+                  child: Container(
+                    padding: EdgeInsets.only(
+                      left: 15,
+                      right: 15,
+                      top: 50,
+                      bottom: 30,
                     ),
-                    padding: EdgeInsets.all(15),
+                    child: Text(
+                      excerpt.topic,
+                      textScaleFactor: 1.3,
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
-                padding: EdgeInsets.all(20),
-              ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Container(
+                      child: Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(15),
+                          child: Text(
+                            excerpt.content,
+                            textScaleFactor: 1.15,
+                          ),
+                        ),
+                      ),
+                      padding: EdgeInsets.only(
+                        top: 0,
+                        bottom: 0,
+                        left: 20,
+                        right: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Center(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Text(
                   'Soziokulturelle Achse:',
@@ -286,30 +331,46 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                   visible: _showCorrection,
                 ),
                 Container(
-                  padding: EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 50),
+                  padding: EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 20),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [Text('Staat'), Text('Markt')],
                   ),
                 ),
                 Visibility(
-                  child: ElevatedButton(onPressed: _showCorrection ? null : onSubmitExcerpt(), child: Text('Fertig')),
+                  child: ElevatedButton(
+                      onPressed: _showCorrection ? null : onSubmitExcerpt(excerpt.counter), child: Text('Fertig')),
                   visible: !_showCorrection,
                 ),
                 Visibility(
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Text(
-                          '${excerpt.speakerFirstName} ${excerpt.speakerLastName}',
-                          textScaleFactor: 1.5,
-                        ),
-                        Text(
-                          '(${excerpt.party})',
-                          textScaleFactor: 1.5,
-                        ),
-                      ],
+                  child: IconButton(
+                    iconSize: 75,
+                    icon: ClipRRect(
+                      borderRadius: BorderRadius.circular(200.0),
+                      child: Image.asset('assets/portrait_id/${excerpt.speakerId}.jpg'),
                     ),
+                    onPressed: () {
+                      return showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('${excerpt.speakerFirstName} ${excerpt.speakerLastName} (${excerpt.party})'),
+                            content: Container(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: SingleChildScrollView(
+                                      child: Text(excerpt.bio != null ? excerpt.bio : ''),
+                                    ),
+                                  )
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                   visible: _showCorrection,
                 ),

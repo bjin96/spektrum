@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:spektrum/authentication.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:spektrum/game.dart';
+
+import 'contacts.dart';
 
 void main() {
   runApp(MyApp());
@@ -67,7 +68,7 @@ class _MyAppState extends State<MyApp> {
               theme: ThemeData(
                 primarySwatch: Colors.blueGrey,
               ),
-              home: GamePage(),
+              home: ContactPage(),
             );
           }
         }
