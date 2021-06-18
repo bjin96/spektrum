@@ -79,8 +79,8 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
       body: Center(
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: GridView.count(
+            crossAxisCount: 1,
             children: [
               Container(
                 padding: EdgeInsets.only(
@@ -92,112 +92,118 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                   textScaleFactor: 3,
                   style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
                 ),
+                alignment: Alignment.bottomCenter,
               ),
-              Container(
-                padding: EdgeInsets.only(top: 10, left: 50, right: 50, bottom: 10),
-                child: TextFormField(
-                  keyboardType: TextInputType.emailAddress,
-                  obscureText: false,
-                  decoration: InputDecoration(hintText: 'E-Mail'),
-                  validator: (String value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Bitte gib deine E-Mail Adresse ein.';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Bitte gib eine korrekte E-Mail Adresse ein.';
-                    }
-                    return null;
-                  },
-                  controller: _mail,
-                  textInputAction: TextInputAction.next,
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.only(top: 10, left: 50, right: 50, bottom: 10),
-                child: TextFormField(
-                  obscureText: true,
-                  style: TextStyle(),
-                  decoration: InputDecoration(
-                    hintText: 'Passwort',
+              Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: EdgeInsets.only(top: 10, left: 50, right: 50, bottom: 10),
+                    child: TextFormField(
+                      keyboardType: TextInputType.emailAddress,
+                      obscureText: false,
+                      decoration: InputDecoration(hintText: 'E-Mail'),
+                      validator: (String value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Bitte gib deine E-Mail Adresse ein.';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Bitte gib eine korrekte E-Mail Adresse ein.';
+                        }
+                        return null;
+                      },
+                      controller: _mail,
+                      textInputAction: TextInputAction.next,
+                    ),
                   ),
-                  validator: (String value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Bitte gib dein Passwort ein.';
-                    }
-                    if (value.length < 8) {
-                      return 'Passwort muss mindesten 8 Zeichen enthalten.';
-                    }
-                    return null;
-                  },
-                  controller: _password,
-                  textInputAction: _isRegisterMode ? TextInputAction.next : TextInputAction.done,
-                  onEditingComplete: _isRegisterMode ? null : () => {signIn()},
-                ),
-              ),
-              Visibility(
-                visible: _isRegisterMode,
-                child: Container(
-                  padding: EdgeInsets.only(top: 10, left: 50, right: 50, bottom: 10),
-                  child: TextFormField(
-                    obscureText: true,
-                    style: TextStyle(),
-                    decoration: InputDecoration(
-                      hintText: 'Passwort wiederholen',
+                  Container(
+                    padding: EdgeInsets.only(top: 10, left: 50, right: 50, bottom: 10),
+                    child: TextFormField(
+                      obscureText: true,
+                      style: TextStyle(),
+                      decoration: InputDecoration(
+                        hintText: 'Passwort',
+                      ),
+                      validator: (String value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Bitte gib dein Passwort ein.';
+                        }
+                        if (value.length < 8) {
+                          return 'Passwort muss mindesten 8 Zeichen enthalten.';
+                        }
+                        return null;
+                      },
+                      controller: _password,
+                      textInputAction: _isRegisterMode ? TextInputAction.next : TextInputAction.done,
+                      onEditingComplete: _isRegisterMode ? null : () => {signIn()},
                     ),
-                    validator: (String value) {
-                      if (value != _password.text) {
-                        return 'Passwörter müssen übereinstimmen.';
-                      }
-                      return null;
-                    },
-                    textInputAction: TextInputAction.done,
-                    onEditingComplete: () => registerUser(),
                   ),
-                ),
-              ),
-              Visibility(
-                visible: !_isRegisterMode,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      child: ElevatedButton(
-                        child: Text('Anmelden'),
-                        onPressed: () => {signIn()},
+                  Visibility(
+                    visible: _isRegisterMode,
+                    child: Container(
+                      padding: EdgeInsets.only(top: 10, left: 50, right: 50, bottom: 10),
+                      child: TextFormField(
+                        obscureText: true,
+                        style: TextStyle(),
+                        decoration: InputDecoration(
+                          hintText: 'Passwort wiederholen',
+                        ),
+                        validator: (String value) {
+                          if (value != _password.text) {
+                            return 'Passwörter müssen übereinstimmen.';
+                          }
+                          return null;
+                        },
+                        textInputAction: TextInputAction.done,
+                        onEditingComplete: () => registerUser(),
                       ),
                     ),
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      child: TextButton(
-                        child: Text('Noch keinen Account?'),
-                        onPressed: () => setState(() => _isRegisterMode = true),
-                      ),
+                  ),
+                  Visibility(
+                    visible: !_isRegisterMode,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          child: ElevatedButton(
+                            child: Text('Anmelden'),
+                            onPressed: () => {signIn()},
+                          ),
+                        ),
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          child: TextButton(
+                            child: Text('Noch keinen Account?'),
+                            onPressed: () => setState(() => _isRegisterMode = true),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              Visibility(
-                visible: _isRegisterMode,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      child: ElevatedButton(
-                        child: Text('Registrieren'),
-                        onPressed: () => {registerUser()},
-                      ),
+                  ),
+                  Visibility(
+                    visible: _isRegisterMode,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          child: ElevatedButton(
+                            child: Text('Registrieren'),
+                            onPressed: () => {registerUser()},
+                          ),
+                        ),
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          child: TextButton(
+                            child: Text('Bereits einen Account?'),
+                            onPressed: () => setState(() => _isRegisterMode = false),
+                          ),
+                        ),
+                      ],
                     ),
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      child: TextButton(
-                        child: Text('Bereits einen Account?'),
-                        onPressed: () => setState(() => _isRegisterMode = false),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
