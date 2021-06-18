@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
@@ -17,8 +19,22 @@ class ContactPage extends StatefulWidget {
 
 class _ContactPageState extends State<ContactPage> {
   _ContactPageState();
+  Future<SpektrumUser> spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
 
   TextEditingController _friendMail = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+
+    Timer.periodic(Duration(seconds: 10), (timer) {
+      if (mounted) {
+        setState(() {
+          spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+        });
+      }
+    });
+  }
 
   void onSendFriendRequest(SpektrumUser user) {
     showDialog(
@@ -72,50 +88,62 @@ class _ContactPageState extends State<ContactPage> {
   }
 
   void onFriendRequestAccepted(SpektrumUser user, String targetUserId) {
+    setState(() {
+      spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+    });
     user.acceptFriendRequest(targetUserId);
   }
 
-  void onChallengeFriend(SpektrumUser user, String opponent) {
-    Navigator.push(
+  void onChallengeFriend(SpektrumUser user, String opponent) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
           builder: (context) => GameRoomPage(
                 opponent: opponent,
               )),
     );
+    setState(() {
+      spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+    });
   }
 
   ElevatedButton getFriendActionButton(SpektrumUser user, String targetUserId) {
     if (user.challengeList.contains(targetUserId)) {
       return ElevatedButton(
         child: Text('Herausforderung annehmen'),
-        onPressed: () {
+        onPressed: () async {
           user.acceptChallenge(targetUserId);
-          Navigator.push(
+          await Navigator.push(
             context,
             MaterialPageRoute(
                 builder: (context) => GameRoomPage(
                       opponent: targetUserId,
                     )),
           );
+          setState(() {
+            spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+          });
         },
       );
     } else if (user.challengeSentList.contains(targetUserId)) {
       return ElevatedButton(
-        child: Text('Herausforderung gesendet'),
+        child: Text('Herausgefordert'),
         onPressed: null,
       );
     } else if (user.openGameList.contains(targetUserId)) {
       return ElevatedButton(
         child: Text('Spiel öffnen'),
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(
                 builder: (context) => GameRoomPage(
                       opponent: targetUserId,
                     )),
           );
+          setState(() {
+            spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+          });
         },
       );
     } else {
@@ -123,7 +151,9 @@ class _ContactPageState extends State<ContactPage> {
         child: Text('herausfordern'),
         onPressed: () {
           user.sendChallenge(targetUserId);
-          build(context);
+          setState(() {
+            spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+          });
         },
       );
     }
@@ -134,24 +164,43 @@ class _ContactPageState extends State<ContactPage> {
     return Scaffold(
       body: Center(
         child: FutureBuilder(
-          future: SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email),
+          future: spektrumUser,
           builder: (BuildContext context, AsyncSnapshot<SpektrumUser> snapshot) {
             if (snapshot.hasData) {
               SpektrumUser user = snapshot.data;
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      child: Text(
-                        user.userId,
-                        style: TextStyle(fontWeight: FontWeight.bold),
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            child: Text(
+                              user.userId,
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            alignment: Alignment.topRight,
+                            padding: EdgeInsets.only(
+                              top: 50,
+                              bottom: 50,
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.logout),
+                            onPressed: () async {
+                              await FirebaseAuth.instance.signOut();
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (context) => AuthenticationPage()),
+                              );
+                            },
+                          ),
+                        ],
                       ),
-                      alignment: Alignment.topRight,
-                      padding: EdgeInsets.all(50),
-                    ),
-                    Container(
-                      child: Row(
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
@@ -165,48 +214,47 @@ class _ContactPageState extends State<ContactPage> {
                           ),
                         ],
                       ),
-                      padding: EdgeInsets.all(30),
-                    ),
-                    Flexible(
-                      child: ListView.builder(
-                          itemCount: user.contactList.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            String targetUserId = user.contactList[index];
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Text(targetUserId),
-                                getFriendActionButton(user, targetUserId),
-                              ],
-                            );
-                          }),
-                    ),
-                    Container(
-                      child: Text(
-                        'Freundschaftseinladungen',
-                        textScaleFactor: 1.2,
-                        style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                      Flexible(
+                        child: ListView.builder(
+                            itemCount: user.contactList.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              String targetUserId = user.contactList[index];
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(targetUserId),
+                                  getFriendActionButton(user, targetUserId),
+                                ],
+                              );
+                            }),
                       ),
-                      alignment: Alignment.centerLeft,
-                      padding: EdgeInsets.all(30),
-                    ),
-                    Flexible(
-                      child: ListView.builder(
-                          itemCount: user.friendRequestList.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Text(user.friendRequestList[index]),
-                                ElevatedButton(
-                                    onPressed: () => onFriendRequestAccepted(user, user.friendRequestList[index]),
-                                    child: Text('annehmen')),
-                              ],
-                            );
-                          }),
-                    ),
-                    Container(
-                      child: Row(
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Freundschaftseinladungen',
+                            textScaleFactor: 1.2,
+                            style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      Flexible(
+                        child: ListView.builder(
+                            itemCount: user.friendRequestList.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Text(user.friendRequestList[index]),
+                                  ElevatedButton(
+                                      onPressed: () => onFriendRequestAccepted(user, user.friendRequestList[index]),
+                                      child: Text('annehmen')),
+                                ],
+                              );
+                            }),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           Text(
                             'Ausstehende Freundschaftseinladungen',
@@ -215,31 +263,20 @@ class _ContactPageState extends State<ContactPage> {
                           ),
                         ],
                       ),
-                      alignment: Alignment.centerLeft,
-                      padding: EdgeInsets.all(30),
-                    ),
-                    Flexible(
-                      child: ListView.builder(
-                          itemCount: user.pendingFriendRequestList.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Text(user.pendingFriendRequestList[index]),
-                              ],
-                            );
-                          }),
-                    ),
-                    ElevatedButton(
-                        onPressed: () async {
-                          await FirebaseAuth.instance.signOut();
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => AuthenticationPage()),
-                          );
-                        },
-                        child: Text('Abmelden')),
-                  ],
+                      Flexible(
+                        child: ListView.builder(
+                            itemCount: user.pendingFriendRequestList.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Text(user.pendingFriendRequestList[index]),
+                                ],
+                              );
+                            }),
+                      ),
+                    ],
+                  ),
                 ),
               );
             } else {

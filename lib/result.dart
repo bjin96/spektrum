@@ -1,68 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'package:postgres/postgres.dart';
-import 'package:spektrum/authentication.dart';
 
-import 'contacts.dart';
 import 'database.dart';
-
-class ResultPage extends StatelessWidget {
-  final int gameId;
-
-  const ResultPage({this.gameId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Ergebnis"),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            FutureBuilder(
-              future: Result.fetchResultsByGameId(gameId),
-              builder: (BuildContext context, AsyncSnapshot<List<Result>> snapshot) {
-                if (snapshot.hasData) {
-                  double totalDistance = 0;
-                  for (Result result in snapshot.data) {
-                    totalDistance += result.distance;
-                  }
-                  return Text('Du warst ${totalDistance.toStringAsFixed(2)} von den korrekten Parteien entfernt.');
-                } else {
-                  return SizedBox(
-                    child: CircularProgressIndicator(),
-                    width: 60,
-                    height: 60,
-                  );
-                }
-              },
-            ),
-            ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => ContactPage()),
-                  );
-                },
-                child: Text('Kontakte')),
-            ElevatedButton(
-                onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => AuthenticationPage()),
-                  );
-                },
-                child: Text('Abmelden')),
-          ],
-        ),
-      ),
-    );
-  }
-}
+import 'excerpt.dart';
 
 class Result {
   int gameId;
@@ -79,6 +19,50 @@ class Result {
       this.socioCulturalCoordinate,
       this.socioEconomicCoordinate,
       this.distance});
+
+  static Future<Map<String, double>> fetchCurrentTotalDistance(String opponent) async {
+    int currentUserGameId = await Excerpt.getGameId(FirebaseAuth.instance.currentUser.email, opponent);
+    int opponentGameId = await Excerpt.getGameId(opponent, FirebaseAuth.instance.currentUser.email);
+
+    List<Result> currentUserResultList = await fetchResultsByGameId(currentUserGameId);
+    List<Result> opponentResultList = await fetchResultsByGameId(opponentGameId);
+
+    double currentUserDistance = 0.0;
+    for (Result result in currentUserResultList) {
+      currentUserDistance += result.distance;
+    }
+
+    double opponentDistance = 0.0;
+    for (Result result in opponentResultList) {
+      opponentDistance += result.distance;
+    }
+
+    return {FirebaseAuth.instance.currentUser.email: currentUserDistance, opponent: opponentDistance};
+  }
+
+  static void setGameFinished(String opponent) async {
+    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
+    await connection.open();
+    await connection.query('''
+      UPDATE game
+      SET finished = true
+      WHERE logged_in_player = @currentUser AND other_player = @opponent
+        OR logged_in_player = @opponent AND other_player = @currentUser
+      ''', substitutionValues: {'currentUser': FirebaseAuth.instance.currentUser.email, 'opponent': opponent});
+    connection.close();
+  }
+
+  static Future<bool> fetchGameFinished(int gameId) async {
+    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
+    await connection.open();
+    final List<Map<String, dynamic>> maps = await connection.mappedResultsQuery('''
+      SELECT finished
+      FROM game
+      WHERE id = @gameId;
+      ''', substitutionValues: {'gameId': gameId});
+    connection.close();
+    return maps[0]['game']['finished'];
+  }
 
   static Future<List<Result>> fetchResultsByGameId(int gameId) async {
     final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
