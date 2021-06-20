@@ -117,12 +117,12 @@ class _GameRoomPageState extends State<GameRoomPage> {
             user.sendChallenge(opponent);
             Navigator.of(context).pop();
           },
-          child: Text('Erneut herausfordern')
+          child: Text('erneut herausfordern')
       );
     } else {
       return ElevatedButton(
           onPressed: () => onStartGame(FirebaseAuth.instance.currentUser.email, opponent),
-          child: Text('Spielen')
+          child: Text('spielen')
       );
     }
   }
@@ -175,7 +175,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
                   if (snapshot.hasData) {
                     return snapshot.data;
                   } else {
-                    return ElevatedButton(onPressed: null, child: Text('Lädt...'));
+                    return ElevatedButton(onPressed: null, child: Text('lädt...'));
                   }
                 }
               ),

@@ -22,6 +22,7 @@ class _ContactPageState extends State<ContactPage> {
   Future<SpektrumUser> spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
 
   TextEditingController _friendMail = TextEditingController();
+  InputDecoration inputDecoration;
 
   @override
   void initState() {
@@ -36,62 +37,96 @@ class _ContactPageState extends State<ContactPage> {
     });
   }
 
-  void onSendFriendRequest(SpektrumUser user) {
+  void onShowFriendRequestDialog(SpektrumUser user) {
+    inputDecoration = InputDecoration(
+      hintText: 'e-mail adresse',
+      errorText: null,
+    );
+
+    void sendFriendRequest(StateSetter setState) async {
+      if (_friendMail.text == null || _friendMail.text.isEmpty) {
+        setState(() {
+          inputDecoration = InputDecoration(
+            hintText: 'e-mail adresse',
+            errorText: 'bitte gib deine e-mail adresse ein.',
+          );
+        });
+        return;
+      }
+      if (!_friendMail.text.contains('@')) {
+        setState(() {
+          inputDecoration = InputDecoration(
+            hintText: 'e-mail adresse',
+            errorText: 'bitte gib eine korrekte e-mail adresse ein.',
+          );
+        });
+        return;
+      }
+
+      try {
+        await user.sendFriendRequest(_friendMail.text);
+        Navigator.of(context).pop();
+        user.pendingFriendRequestList.add(_friendMail.text);
+      } on PostgreSQLException {
+        setState(() {
+          inputDecoration = InputDecoration(
+            hintText: 'e-mail adresse',
+            errorText: 'nutzer wurde nicht gefunden.',
+          );
+        });
+      }
+    }
+
     showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('Freund*in hinzufügen.'),
-            content: Container(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    keyboardType: TextInputType.emailAddress,
-                    obscureText: false,
-                    decoration: InputDecoration(hintText: 'E-Mail Adresse'),
-                    validator: (String value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Bitte gib deine E-Mail Adresse ein.';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Bitte gib eine korrekte E-Mail Adresse ein.';
-                      }
-                      return null;
-                    },
-                    controller: _friendMail,
-                    textInputAction: TextInputAction.next,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+            title: Text('freund:in hinzufügen.'),
+            content: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState) {
+                return Container(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: EdgeInsets.all(10),
-                        child: ElevatedButton(onPressed: () => Navigator.of(context).pop(), child: Text('Abbrechen')),
+                      TextFormField(
+                        keyboardType: TextInputType.emailAddress,
+                        obscureText: false,
+                        decoration: inputDecoration,
+                        controller: _friendMail,
+                        textInputAction: TextInputAction.done,
+                        onEditingComplete: () => sendFriendRequest(setState),
                       ),
-                      Container(
-                        padding: EdgeInsets.all(10),
-                        child: ElevatedButton(
-                            onPressed: () {
-                              user.sendFriendRequest(_friendMail.text);
-                              Navigator.of(context).pop();
-                            },
-                            child: Text('Bestätigen')),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(10),
+                            child: ElevatedButton(onPressed: () => Navigator.of(context).pop(), child: Text('abbrechen')),
+                          ),
+                          Container(
+                            padding: EdgeInsets.all(10),
+                            child: ElevatedButton(
+                                onPressed: () => sendFriendRequest(setState),
+                                child: Text('bestätigen')),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           );
         });
   }
 
   void onFriendRequestAccepted(SpektrumUser user, String targetUserId) {
-    setState(() {
-      spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
-    });
     user.acceptFriendRequest(targetUserId);
+    setState(() {
+      user.friendRequestList.remove(targetUserId);
+      user.contactList.add(targetUserId);
+      user.contactList.sort();
+    });
   }
 
   void onChallengeFriend(SpektrumUser user, String opponent) async {
@@ -103,14 +138,14 @@ class _ContactPageState extends State<ContactPage> {
               )),
     );
     setState(() {
-      spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+      user.challengeSentList.add(opponent);
     });
   }
 
   ElevatedButton getFriendActionButton(SpektrumUser user, String targetUserId) {
     if (user.challengeList.contains(targetUserId)) {
       return ElevatedButton(
-        child: Text('Herausforderung annehmen'),
+        child: Text('herausforderung annehmen'),
         onPressed: () async {
           user.acceptChallenge(targetUserId);
           await Navigator.push(
@@ -121,18 +156,19 @@ class _ContactPageState extends State<ContactPage> {
                     )),
           );
           setState(() {
-            spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+            user.challengeList.remove(targetUserId);
+            user.openGameList.add(targetUserId);
           });
         },
       );
     } else if (user.challengeSentList.contains(targetUserId)) {
       return ElevatedButton(
-        child: Text('Herausgefordert'),
+        child: Text('herausgefordert'),
         onPressed: null,
       );
     } else if (user.openGameList.contains(targetUserId)) {
       return ElevatedButton(
-        child: Text('Spiel öffnen'),
+        child: Text('spiel öffnen'),
         onPressed: () async {
           await Navigator.push(
             context,
@@ -141,9 +177,6 @@ class _ContactPageState extends State<ContactPage> {
                       opponent: targetUserId,
                     )),
           );
-          setState(() {
-            spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
-          });
         },
       );
     } else {
@@ -152,7 +185,7 @@ class _ContactPageState extends State<ContactPage> {
         onPressed: () {
           user.sendChallenge(targetUserId);
           setState(() {
-            spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+            user.challengeSentList.add(targetUserId);
           });
         },
       );
@@ -204,12 +237,12 @@ class _ContactPageState extends State<ContactPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Freund*innen',
+                            'freund:innen',
                             textScaleFactor: 1.2,
                             style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
                           ),
                           IconButton(
-                            onPressed: () => onSendFriendRequest(user),
+                            onPressed: () => onShowFriendRequestDialog(user),
                             icon: Icon(Icons.person_add),
                           ),
                         ],
@@ -232,7 +265,7 @@ class _ContactPageState extends State<ContactPage> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           Text(
-                            'Freundschaftseinladungen',
+                            'freundschaftseinladungen',
                             textScaleFactor: 1.2,
                             style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
                           ),
@@ -257,7 +290,7 @@ class _ContactPageState extends State<ContactPage> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           Text(
-                            'Ausstehende Freundschaftseinladungen',
+                            'ausstehende freundschaftseinladungen',
                             textScaleFactor: 1.2,
                             style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
                           ),
@@ -379,16 +412,20 @@ class SpektrumUser {
   }
 
   Future<void> sendFriendRequest(String targetUserId) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    await connection.query('''
-      INSERT INTO friend_request (sender, receiver)
-      VALUES (@userId, @targetUserId)
-    ''', substitutionValues: {
-      'userId': userId,
-      'targetUserId': targetUserId,
-    });
-    connection.close();
+    try {
+      final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
+      await connection.open();
+      await connection.query('''
+        INSERT INTO friend_request (sender, receiver)
+        VALUES (@userId, @targetUserId)
+      ''', substitutionValues: {
+        'userId': userId,
+        'targetUserId': targetUserId,
+      });
+      connection.close();
+    } catch(e) {
+      rethrow;
+    }
   }
 
   Future<void> acceptFriendRequest(String targetUserId) async {

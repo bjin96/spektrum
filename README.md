@@ -1,3 +1,3 @@
 # spektrum
 
-Crowdsourced classification of speech from  German parlament members.
+Crowdsourced classification of speech from  German parliament members.

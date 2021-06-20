@@ -18,13 +18,13 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final Future<FirebaseApp> _initialization = Firebase.initializeApp();
   Widget _app = MaterialApp(
-    title: 'Spektrum',
+    title: 'spektrum',
     theme: ThemeData(
       primarySwatch: Colors.blueGrey,
     ),
     home: Scaffold(
       body: Center(
-        child: Text('Lädt...'),
+        child: Text('lädt...'),
       ),
     ),
   );
@@ -40,7 +40,7 @@ class _MyAppState extends State<MyApp> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return MaterialApp(
-            title: 'Spektrum',
+            title: 'spektrum',
             theme: ThemeData(
               primarySwatch: Colors.blueGrey,
             ),
@@ -56,7 +56,7 @@ class _MyAppState extends State<MyApp> {
           User user = FirebaseAuth.instance.currentUser;
           if (user == null) {
             _app = MaterialApp(
-              title: 'Spektrum',
+              title: 'spektrum',
               theme: ThemeData(
                 primarySwatch: Colors.blueGrey,
               ),
@@ -64,7 +64,7 @@ class _MyAppState extends State<MyApp> {
             );
           } else {
             _app = MaterialApp(
-              title: 'Spektrum',
+              title: 'spektrum',
               theme: ThemeData(
                 primarySwatch: Colors.blueGrey,
               ),

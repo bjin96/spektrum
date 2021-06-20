@@ -23,12 +23,12 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
     if (_formKey.currentState.validate()) {
       try {
         await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: _mail.text,
+            email: _mail.text.toLowerCase(),
             password: _password.text
         );
         await SpektrumUser(
-          userId: _mail.text,
-          userName: _mail.text,
+          userId: _mail.text.toLowerCase(),
+          userName: _mail.text.toLowerCase(),
           contactList: <String>[],
           friendRequestList: <String>[],
           pendingFriendRequestList: <String>[],
@@ -56,7 +56,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
     if (_formKey.currentState.validate()) {
       try {
         await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _mail.text,
+          email: _mail.text.toLowerCase(),
           password: _password.text,
         );
         Navigator.pushReplacement(
@@ -102,13 +102,13 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                     child: TextFormField(
                       keyboardType: TextInputType.emailAddress,
                       obscureText: false,
-                      decoration: InputDecoration(hintText: 'E-Mail'),
+                      decoration: InputDecoration(hintText: 'e-mail'),
                       validator: (String value) {
                         if (value == null || value.isEmpty) {
-                          return 'Bitte gib deine E-Mail Adresse ein.';
+                          return 'bitte gib deine e-mail adresse ein.';
                         }
                         if (!value.contains('@')) {
-                          return 'Bitte gib eine korrekte E-Mail Adresse ein.';
+                          return 'bitte gib eine korrekte e-Mail adresse ein.';
                         }
                         return null;
                       },
@@ -122,14 +122,14 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                       obscureText: true,
                       style: TextStyle(),
                       decoration: InputDecoration(
-                        hintText: 'Passwort',
+                        hintText: 'passwort',
                       ),
                       validator: (String value) {
                         if (value == null || value.isEmpty) {
-                          return 'Bitte gib dein Passwort ein.';
+                          return 'bitte gib dein passwort ein.';
                         }
                         if (value.length < 8) {
-                          return 'Passwort muss mindesten 8 Zeichen enthalten.';
+                          return 'passwort muss mindesten 8 zeichen enthalten.';
                         }
                         return null;
                       },
@@ -146,11 +146,11 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                         obscureText: true,
                         style: TextStyle(),
                         decoration: InputDecoration(
-                          hintText: 'Passwort wiederholen',
+                          hintText: 'passwort wiederholen',
                         ),
                         validator: (String value) {
                           if (value != _password.text) {
-                            return 'Passwörter müssen übereinstimmen.';
+                            return 'passwörter müssen übereinstimmen.';
                           }
                           return null;
                         },
@@ -167,14 +167,14 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                         Container(
                           padding: EdgeInsets.all(10),
                           child: ElevatedButton(
-                            child: Text('Anmelden'),
+                            child: Text('anmelden'),
                             onPressed: () => {signIn()},
                           ),
                         ),
                         Container(
                           padding: EdgeInsets.all(10),
                           child: TextButton(
-                            child: Text('Noch keinen Account?'),
+                            child: Text('noch keinen account?'),
                             onPressed: () => setState(() => _isRegisterMode = true),
                           ),
                         ),
@@ -189,14 +189,14 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                         Container(
                           padding: EdgeInsets.all(10),
                           child: ElevatedButton(
-                            child: Text('Registrieren'),
+                            child: Text('registrieren'),
                             onPressed: () => {registerUser()},
                           ),
                         ),
                         Container(
                           padding: EdgeInsets.all(10),
                           child: TextButton(
-                            child: Text('Bereits einen Account?'),
+                            child: Text('bereits einen account?'),
                             onPressed: () => setState(() => _isRegisterMode = false),
                           ),
                         ),

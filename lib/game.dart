@@ -262,7 +262,7 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(
-                    'Soziokulturelle Achse:',
+                    'soziokulturelle achse:',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Visibility(
@@ -308,7 +308,7 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                     ),
                   ),
                   Text(
-                    'Sozioökonomische Achse:',
+                    'sozioökonomische achse:',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Visibility(
@@ -350,12 +350,12 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                     padding: EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [Text('Staat'), Text('Markt')],
+                      children: [Text('staat'), Text('markt')],
                     ),
                   ),
                   Visibility(
                     child: ElevatedButton(
-                        onPressed: _showCorrection ? null : onSubmitExcerpt(excerpt.counter), child: Text('Fertig')),
+                        onPressed: _showCorrection ? null : onSubmitExcerpt(excerpt.counter), child: Text('fertig')),
                     visible: !_showCorrection,
                   ),
                   Visibility(
