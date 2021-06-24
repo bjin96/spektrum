@@ -80,6 +80,10 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
         child: Form(
           key: _formKey,
           child: GridView.count(
+            childAspectRatio: MediaQuery.of(context).size.width /
+                (MediaQuery.of(context).size.height -
+                    (MediaQuery.of(context).padding.top + MediaQuery.of(context).padding.bottom)) *
+                2,
             crossAxisCount: 1,
             children: [
               Container(

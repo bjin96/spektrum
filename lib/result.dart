@@ -47,7 +47,6 @@ class Result {
       UPDATE game
       SET finished = true
       WHERE logged_in_player = @currentUser AND other_player = @opponent
-        OR logged_in_player = @opponent AND other_player = @currentUser
       ''', substitutionValues: {'currentUser': FirebaseAuth.instance.currentUser.email, 'opponent': opponent});
     connection.close();
   }

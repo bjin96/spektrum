@@ -67,7 +67,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
             return Column(
               children: [
                 SizedBox(
-                  height: 400,
+                  height: MediaQuery.of(context).size.height / 3,
                   width: 10,
                   child: RotatedBox(
                     quarterTurns: -3,
@@ -107,11 +107,13 @@ class _GameRoomPageState extends State<GameRoomPage> {
   }
 
   Future<ElevatedButton> getGameRoomActionButton() async {
-    int gameId = await Excerpt.getGameId(FirebaseAuth.instance.currentUser.email, opponent);
-    bool isGameFinished = await Result.fetchGameFinished(gameId);
+    int loggedInUserGameId = await Excerpt.getGameId(FirebaseAuth.instance.currentUser.email, opponent);
+    int opponentGameId = await Excerpt.getGameId(opponent, FirebaseAuth.instance.currentUser.email);
+    bool isLoggedInUserGameFinished = await Result.fetchGameFinished(loggedInUserGameId);
+    bool isOpponentGameFinished = await Result.fetchGameFinished(opponentGameId);
 
     SpektrumUser user = await SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
-    if (isGameFinished) {
+    if (isLoggedInUserGameFinished && isOpponentGameFinished) {
       return ElevatedButton(
           onPressed: () {
             user.sendChallenge(opponent);
@@ -136,7 +138,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.miniStartTop,
       body: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           Padding(
             padding: EdgeInsets.only(top: 100),

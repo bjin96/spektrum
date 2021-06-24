@@ -120,7 +120,8 @@ class _GamePage extends State<GamePage> {
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key key, this.excerpt, this.gameId, this.result, this.pageController, this.opponent}) : super(key: key);
+  const MyHomePage({Key key, this.excerpt, this.gameId, this.result, this.pageController, this.opponent})
+      : super(key: key);
 
   final Excerpt excerpt;
   final Result result;
@@ -174,7 +175,7 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
         socioEconomicCoordinate: _currentSocioEconomicValue.toInt(),
         distance: calculateEuclideanDistance(),
       ).store();
-      if (pageController.page == 3) {
+      if (pageController.page == 2) {
         Result.setGameFinished(opponent);
       }
       setState(() {
@@ -198,11 +199,15 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
           );
         }
         if (data.delta.dx < 0 && _showCorrection) {
-          pageController.animateToPage(
-            pageController.page.toInt() + 1,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeIn,
-          );
+          if (pageController.page == 2) {
+            Navigator.of(context).pop();
+          } else {
+            pageController.animateToPage(
+              pageController.page.toInt() + 1,
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeIn,
+            );
+          }
         }
       },
       child: Scaffold(
@@ -212,6 +217,10 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.miniEndTop,
         body: GridView.count(
+          childAspectRatio: MediaQuery.of(context).size.width /
+              (MediaQuery.of(context).size.height -
+                  (MediaQuery.of(context).padding.top + MediaQuery.of(context).padding.bottom)) *
+              2,
           crossAxisCount: 1,
           children: <Widget>[
             Center(
@@ -229,7 +238,8 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                       child: Text(
                         excerpt.topic,
                         textScaleFactor: 1.3,
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
@@ -241,7 +251,7 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                             padding: EdgeInsets.all(15),
                             child: Text(
                               excerpt.content,
-                              textScaleFactor: 1.15,
+                              textScaleFactor: 1,
                             ),
                           ),
                         ),
@@ -262,8 +272,8 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(
-                    'soziokulturelle achse:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    'soziokulturelle achse',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
                   ),
                   Visibility(
                     child: Container(
@@ -308,8 +318,8 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                     ),
                   ),
                   Text(
-                    'sozioökonomische achse:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    'sozioökonomische achse',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
                   ),
                   Visibility(
                     child: Container(
@@ -373,14 +383,17 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                               builder: (BuildContext context) {
                                 return AlertDialog(
                                   title:
-                                  Text('${excerpt.speakerFirstName} ${excerpt.speakerLastName} (${excerpt.party})'),
+                                      Text('${excerpt.speakerFirstName} ${excerpt.speakerLastName} (${excerpt.party})'),
                                   content: Container(
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Flexible(
                                           child: SingleChildScrollView(
-                                            child: Text(excerpt.bio != null ? excerpt.bio : ''),
+                                            child: Text(
+                                              excerpt.bio != null ? excerpt.bio : '',
+                                              textScaleFactor: 0.8,
+                                            ),
                                           ),
                                         )
                                       ],

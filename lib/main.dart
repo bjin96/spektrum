@@ -21,6 +21,7 @@ class _MyAppState extends State<MyApp> {
     title: 'spektrum',
     theme: ThemeData(
       primarySwatch: Colors.blueGrey,
+      fontFamily: 'RobotoMono',
     ),
     home: Scaffold(
       body: Center(
@@ -43,6 +44,7 @@ class _MyAppState extends State<MyApp> {
             title: 'spektrum',
             theme: ThemeData(
               primarySwatch: Colors.blueGrey,
+              fontFamily: 'RobotoMono',
             ),
             home: Scaffold(
               body: Center(
@@ -59,6 +61,7 @@ class _MyAppState extends State<MyApp> {
               title: 'spektrum',
               theme: ThemeData(
                 primarySwatch: Colors.blueGrey,
+                fontFamily: 'RobotoMono',
               ),
               home: AuthenticationPage(),
             );
@@ -67,6 +70,7 @@ class _MyAppState extends State<MyApp> {
               title: 'spektrum',
               theme: ThemeData(
                 primarySwatch: Colors.blueGrey,
+                fontFamily: 'RobotoMono',
               ),
               home: ContactPage(),
             );

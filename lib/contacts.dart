@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:postgres/postgres.dart';
 
@@ -9,6 +10,35 @@ import 'authentication.dart';
 import 'database.dart';
 import 'excerpt.dart';
 import 'game_room.dart';
+
+enum MenuOption {
+  userName,
+  profileImage,
+  logOut,
+}
+
+extension MenuOptionExtension on MenuOption {
+  Function get action {
+    switch (this) {
+      case MenuOption.userName:
+        return (BuildContext context, _ContactPageState contactPage, SpektrumUser user) {
+          contactPage.onShowChangeUserNameDialog(user);
+        };
+      case MenuOption.profileImage:
+        return (BuildContext context, _ContactPageState contactPage, SpektrumUser user) {};
+      case MenuOption.logOut:
+        return (BuildContext context, _ContactPageState contactPage, SpektrumUser user) async {
+          await FirebaseAuth.instance.signOut();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => AuthenticationPage()),
+          );
+        };
+      default:
+        return null;
+    }
+  }
+}
 
 class ContactPage extends StatefulWidget {
   const ContactPage({Key key}) : super(key: key);
@@ -19,9 +49,10 @@ class ContactPage extends StatefulWidget {
 
 class _ContactPageState extends State<ContactPage> {
   _ContactPageState();
+
   Future<SpektrumUser> spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
 
-  TextEditingController _friendMail = TextEditingController();
+  TextEditingController _newUserName = TextEditingController();
   InputDecoration inputDecoration;
 
   @override
@@ -37,15 +68,111 @@ class _ContactPageState extends State<ContactPage> {
     });
   }
 
+  void onShowChangeUserNameDialog(SpektrumUser user) {
+    inputDecoration = InputDecoration(
+      hintText: 'neuer benutzername',
+      errorText: null,
+    );
+
+    void changeUserName(StateSetter setStateDialog, StateSetter setStateParent) async {
+      if (_newUserName.text == null || _newUserName.text.isEmpty) {
+        setStateDialog(() {
+          inputDecoration = InputDecoration(
+            hintText: 'neuer benutzername',
+            errorText: 'bitte gib einen neuen benutzername ein.',
+          );
+        });
+        return;
+      }
+      if (_newUserName.text.length < 3) {
+        setStateDialog(() {
+          inputDecoration = InputDecoration(
+            hintText: 'neuer benutzername',
+            errorText: 'name muss mindestens 4 zeichen lang sein.',
+          );
+        });
+        return;
+      }
+
+      if (_newUserName.text.length > 16) {
+        setStateDialog(() {
+          inputDecoration = InputDecoration(
+            hintText: 'neuer benutzername',
+            errorText: 'name darf höchstens 16 zeichen lang sein.',
+          );
+        });
+        return;
+      }
+
+      try {
+        await user.changeUserName(_newUserName.text);
+        Navigator.of(context).pop();
+        setStateParent(() => user.userName = _newUserName.text);
+      } on PostgreSQLException {
+        setStateDialog(() {
+          inputDecoration = InputDecoration(
+            hintText: 'neuer benutzername',
+            errorText: 'name konnte nicht geändert werden.',
+          );
+        });
+      }
+    }
+
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          StateSetter setStateParent = setState;
+          return AlertDialog(
+            title: Text('benutzernamen ändern'),
+            content: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setStateDialog) {
+                return Container(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        keyboardType: TextInputType.name,
+                        obscureText: false,
+                        decoration: inputDecoration,
+                        controller: _newUserName,
+                        textInputAction: TextInputAction.done,
+                        onEditingComplete: () => changeUserName(setStateDialog, setStateParent),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(10),
+                            child: ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: Text('abbrechen', textScaleFactor: 0.9)),
+                          ),
+                          Container(
+                            padding: EdgeInsets.all(10),
+                            child: ElevatedButton(
+                                onPressed: () => changeUserName(setStateDialog, setStateParent),
+                                child: Text('bestätigen', textScaleFactor: 0.9)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          );
+        });
+  }
+
   void onShowFriendRequestDialog(SpektrumUser user) {
     inputDecoration = InputDecoration(
       hintText: 'e-mail adresse',
       errorText: null,
     );
 
-    void sendFriendRequest(StateSetter setState) async {
-      if (_friendMail.text == null || _friendMail.text.isEmpty) {
-        setState(() {
+    void sendFriendRequest(StateSetter setStateDialog, StateSetter setStateParent) async {
+      if (_newUserName.text == null || _newUserName.text.isEmpty) {
+        setStateDialog(() {
           inputDecoration = InputDecoration(
             hintText: 'e-mail adresse',
             errorText: 'bitte gib deine e-mail adresse ein.',
@@ -53,8 +180,8 @@ class _ContactPageState extends State<ContactPage> {
         });
         return;
       }
-      if (!_friendMail.text.contains('@')) {
-        setState(() {
+      if (!_newUserName.text.contains('@')) {
+        setStateDialog(() {
           inputDecoration = InputDecoration(
             hintText: 'e-mail adresse',
             errorText: 'bitte gib eine korrekte e-mail adresse ein.',
@@ -64,11 +191,11 @@ class _ContactPageState extends State<ContactPage> {
       }
 
       try {
-        await user.sendFriendRequest(_friendMail.text);
+        await user.sendFriendRequest(_newUserName.text.toLowerCase());
         Navigator.of(context).pop();
-        user.pendingFriendRequestList.add(_friendMail.text);
+        setStateParent(() => user.pendingFriendRequestList.add(_newUserName.text.toLowerCase()));
       } on PostgreSQLException {
-        setState(() {
+        setStateDialog(() {
           inputDecoration = InputDecoration(
             hintText: 'e-mail adresse',
             errorText: 'nutzer wurde nicht gefunden.',
@@ -80,10 +207,11 @@ class _ContactPageState extends State<ContactPage> {
     showDialog(
         context: context,
         builder: (BuildContext context) {
+          StateSetter setStateParent = setState;
           return AlertDialog(
             title: Text('freund:in hinzufügen.'),
             content: StatefulBuilder(
-              builder: (BuildContext context, StateSetter setState) {
+              builder: (BuildContext context, StateSetter setStateDialog) {
                 return Container(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -92,22 +220,24 @@ class _ContactPageState extends State<ContactPage> {
                         keyboardType: TextInputType.emailAddress,
                         obscureText: false,
                         decoration: inputDecoration,
-                        controller: _friendMail,
+                        controller: _newUserName,
                         textInputAction: TextInputAction.done,
-                        onEditingComplete: () => sendFriendRequest(setState),
+                        onEditingComplete: () => sendFriendRequest(setStateDialog, setStateParent),
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
                             padding: EdgeInsets.all(10),
-                            child: ElevatedButton(onPressed: () => Navigator.of(context).pop(), child: Text('abbrechen')),
+                            child: ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: Text('abbrechen', textScaleFactor: 0.9)),
                           ),
                           Container(
                             padding: EdgeInsets.all(10),
                             child: ElevatedButton(
-                                onPressed: () => sendFriendRequest(setState),
-                                child: Text('bestätigen')),
+                                onPressed: () => sendFriendRequest(setStateDialog, setStateParent),
+                                child: Text('bestätigen', textScaleFactor: 0.9)),
                           ),
                         ],
                       ),
@@ -129,25 +259,12 @@ class _ContactPageState extends State<ContactPage> {
     });
   }
 
-  void onChallengeFriend(SpektrumUser user, String opponent) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (context) => GameRoomPage(
-                opponent: opponent,
-              )),
-    );
-    setState(() {
-      user.challengeSentList.add(opponent);
-    });
-  }
-
-  ElevatedButton getFriendActionButton(SpektrumUser user, String targetUserId) {
+  Widget getFriendActionButton(SpektrumUser user, String targetUserId) {
     if (user.challengeList.contains(targetUserId)) {
-      return ElevatedButton(
-        child: Text('herausforderung annehmen'),
+      return IconButton(
+        icon: Icon(Icons.check),
         onPressed: () async {
-          user.acceptChallenge(targetUserId);
+          await user.acceptChallenge(targetUserId);
           await Navigator.push(
             context,
             MaterialPageRoute(
@@ -162,13 +279,13 @@ class _ContactPageState extends State<ContactPage> {
         },
       );
     } else if (user.challengeSentList.contains(targetUserId)) {
-      return ElevatedButton(
-        child: Text('herausgefordert'),
+      return IconButton(
+        icon: Icon(Icons.autorenew),
         onPressed: null,
       );
     } else if (user.openGameList.contains(targetUserId)) {
-      return ElevatedButton(
-        child: Text('spiel öffnen'),
+      return IconButton(
+        icon: Icon(Icons.arrow_forward),
         onPressed: () async {
           await Navigator.push(
             context,
@@ -180,8 +297,8 @@ class _ContactPageState extends State<ContactPage> {
         },
       );
     } else {
-      return ElevatedButton(
-        child: Text('herausfordern'),
+      return IconButton(
+        icon: Icon(Icons.mail_outline),
         onPressed: () {
           user.sendChallenge(targetUserId);
           setState(() {
@@ -201,116 +318,153 @@ class _ContactPageState extends State<ContactPage> {
           builder: (BuildContext context, AsyncSnapshot<SpektrumUser> snapshot) {
             if (snapshot.hasData) {
               SpektrumUser user = snapshot.data;
-              return Container(
-                padding: EdgeInsets.all(20),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+              return PageView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  Container(
+                    padding: EdgeInsets.only(
+                      top: 40,
+                      bottom: 20,
+                      left: 20,
+                      right: 20,
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              PopupMenuButton<MenuOption>(
+                                icon: Icon(Icons.person),
+                                iconSize: 50,
+                                onSelected: (MenuOption selected) {
+                                  selected.action(context, this, user);
+                                },
+                                itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuOption>>[
+                                  PopupMenuItem(
+                                    value: MenuOption.userName,
+                                    child: Text(user.userName),
+                                  ),
+                                  PopupMenuItem(
+                                    value: MenuOption.profileImage,
+                                    child: Text('profilbild ändern'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: MenuOption.logOut,
+                                    child: Text('abmelden'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                           Container(
-                            child: Text(
-                              user.userId,
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            alignment: Alignment.topRight,
                             padding: EdgeInsets.only(
-                              top: 50,
+                              top: 25,
                               bottom: 50,
                             ),
+                            child: Text(
+                              'spektrum',
+                              textScaleFactor: 3,
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                            ),
+                            alignment: Alignment.bottomCenter,
                           ),
-                          IconButton(
-                            icon: Icon(Icons.logout),
-                            onPressed: () async {
-                              await FirebaseAuth.instance.signOut();
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (context) => AuthenticationPage()),
-                              );
-                            },
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'freund:innen',
+                                textScaleFactor: 1.1,
+                                style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                              ),
+                              IconButton(
+                                onPressed: () => onShowFriendRequestDialog(user),
+                                icon: Icon(Icons.person_add),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'freund:innen',
-                            textScaleFactor: 1.2,
-                            style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
-                          ),
-                          IconButton(
-                            onPressed: () => onShowFriendRequestDialog(user),
-                            icon: Icon(Icons.person_add),
-                          ),
-                        ],
-                      ),
-                      Flexible(
-                        child: ListView.builder(
-                            itemCount: user.contactList.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              String targetUserId = user.contactList[index];
-                              return Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(targetUserId),
-                                  getFriendActionButton(user, targetUserId),
-                                ],
-                              );
-                            }),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Text(
-                            'freundschaftseinladungen',
-                            textScaleFactor: 1.2,
-                            style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                          Flexible(
+                            child: ListView.builder(
+                                itemCount: user.contactList.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  String targetUserId = user.contactList[index];
+                                  return Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(targetUserId),
+                                      getFriendActionButton(user, targetUserId),
+                                    ],
+                                  );
+                                }),
                           ),
                         ],
                       ),
-                      Flexible(
-                        child: ListView.builder(
-                            itemCount: user.friendRequestList.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              return Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  Text(user.friendRequestList[index]),
-                                  ElevatedButton(
-                                      onPressed: () => onFriendRequestAccepted(user, user.friendRequestList[index]),
-                                      child: Text('annehmen')),
-                                ],
-                              );
-                            }),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ausstehende freundschaftseinladungen',
-                            textScaleFactor: 1.2,
-                            style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      Flexible(
-                        child: ListView.builder(
-                            itemCount: user.pendingFriendRequestList.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              return Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  Text(user.pendingFriendRequestList[index]),
-                                ],
-                              );
-                            }),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  Container(
+                    padding: EdgeInsets.only(
+                      top: 100,
+                      left: 20,
+                      right: 20,
+                      bottom: 20,
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text(
+                                'freundschaftseinladungen',
+                                textScaleFactor: 1.1,
+                                style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Flexible(
+                            child: ListView.builder(
+                                itemCount: user.friendRequestList.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  return Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      Text(user.friendRequestList[index]),
+                                      ElevatedButton(
+                                          onPressed: () => onFriendRequestAccepted(user, user.friendRequestList[index]),
+                                          child: Text('annehmen', textScaleFactor: 0.8)),
+                                    ],
+                                  );
+                                }),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ausstehende freundschaftseinladungen',
+                                textScaleFactor: 1.1,
+                                style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Flexible(
+                            child: ListView.builder(
+                                itemCount: user.pendingFriendRequestList.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  return Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      Text(user.pendingFriendRequestList[index]),
+                                    ],
+                                  );
+                                }),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               );
             } else {
               return SizedBox(
@@ -411,19 +565,72 @@ class SpektrumUser {
     connection.close();
   }
 
+  Future<void> changeUserName(String newUserName) async {
+    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
+    await connection.open();
+    await connection.query('''
+      UPDATE spektrum_user
+      SET name = @newUserName
+      WHERE id = @userId
+    ''', substitutionValues: {
+      'userId': userId,
+      'newUserName': newUserName,
+    });
+    connection.close();
+  }
+
   Future<void> sendFriendRequest(String targetUserId) async {
     try {
       final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
       await connection.open();
-      await connection.query('''
-        INSERT INTO friend_request (sender, receiver)
-        VALUES (@userId, @targetUserId)
-      ''', substitutionValues: {
-        'userId': userId,
-        'targetUserId': targetUserId,
+      await connection.transaction((ctx) async {
+        final List<Map<String, dynamic>> map = await ctx.mappedResultsQuery('''
+            SELECT EXISTS(
+              SELECT sender, receiver
+              FROM friend_request
+              WHERE sender = @targetUserId
+                AND receiver = @userId
+            )
+            ''', substitutionValues: {
+          'userId': userId,
+          'targetUserId': targetUserId,
+        });
+        bool isAlreadyRequested = map[0]['']['exists'];
+        if (!isAlreadyRequested) {
+          await connection.query('''
+            INSERT INTO friend_request (sender, receiver)
+            VALUES (@userId, @targetUserId)
+          ''', substitutionValues: {
+            'userId': userId,
+            'targetUserId': targetUserId,
+          });
+        } else {
+          await ctx.query('''
+            DELETE FROM friend_request
+            WHERE receiver = @userId
+            AND sender = @targetUserId
+          ''', substitutionValues: {
+            'userId': userId,
+            'targetUserId': targetUserId,
+          });
+          await ctx.query('''
+            INSERT INTO friend (logged_in_user, user_friend)
+            VALUES (@userId, @targetUserId)
+          ''', substitutionValues: {
+            'userId': userId,
+            'targetUserId': targetUserId,
+          });
+          await ctx.query('''
+            INSERT INTO friend (logged_in_user, user_friend)
+            VALUES (@targetUserId, @userId)
+          ''', substitutionValues: {
+            'userId': userId,
+            'targetUserId': targetUserId,
+          });
+        }
       });
       connection.close();
-    } catch(e) {
+    } catch (e) {
       rethrow;
     }
   }
@@ -461,13 +668,88 @@ class SpektrumUser {
   Future<void> sendChallenge(String targetUserId) async {
     final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
     await connection.open();
-    await connection.query('''
-      INSERT INTO game_request (sender, receiver)
-      VALUES (@userId, @targetUserId)
-    ''', substitutionValues: {
-      'userId': userId,
-      'targetUserId': targetUserId,
+    await connection.transaction((ctx) async {
+      final List<Map<String, dynamic>> map = await ctx.mappedResultsQuery('''
+      SELECT EXISTS(
+        SELECT sender, receiver
+        FROM game_request
+        WHERE sender = @targetUserId
+          AND receiver = @userId
+      )
+      ''', substitutionValues: {
+        'userId': userId,
+        'targetUserId': targetUserId,
+      });
+      bool isAlreadyChallenged = map[0]['']['exists'];
+      if (!isAlreadyChallenged) {
+        await ctx.query('''
+          INSERT INTO game_request (sender, receiver)
+          VALUES (@userId, @targetUserId)
+        ''', substitutionValues: {
+          'userId': userId,
+          'targetUserId': targetUserId,
+        });
+      } else {
+        await ctx.query('''
+          DELETE FROM game_request
+          WHERE receiver = @userId
+          AND sender = @targetUserId
+        ''', substitutionValues: {
+          'userId': userId,
+          'targetUserId': targetUserId,
+        });
+        await ctx.query('''
+          INSERT INTO game (logged_in_player, other_player)
+          VALUES (@userId, @targetUserId)
+        ''', substitutionValues: {
+          'userId': userId,
+          'targetUserId': targetUserId,
+        });
+        await ctx.query('''
+          INSERT INTO game (game_created, logged_in_player, other_player)
+          VALUES (
+          (
+            SELECT game_created
+            FROM game
+            WHERE logged_in_player = @userId
+            AND other_player = @targetUserId
+            AND finished = false
+          ), @targetUserId, @userId)
+        ''', substitutionValues: {
+          'userId': userId,
+          'targetUserId': targetUserId,
+        });
+        final List<Map<String, dynamic>> gameMap = await ctx.mappedResultsQuery('''
+        SELECT id
+        FROM game
+        WHERE (
+          (
+            logged_in_player = @loggedInPlayer
+            AND other_player = @otherPlayer
+          ) OR (
+            logged_in_player = @otherPlayer
+            AND other_player = @loggedInPlayer
+          )
+        )
+        AND finished = false
+        ''', substitutionValues: {'loggedInPlayer': userId, 'otherPlayer': targetUserId});
+        List<Map<String, dynamic>> excerptIdList = await Excerpt.getRandomExcerptIdList();
+        for (int i = 0; i < excerptIdList.length; i++) {
+          for (Map<String, dynamic> row in gameMap) {
+            await ctx.query('''
+            INSERT INTO game_excerpt (game_id, counter, speech_id, fragment)
+            VALUES (@gameId, @counter, @speechId, @fragment)
+            ''', substitutionValues: {
+              'gameId': row['game']['id'],
+              'counter': i,
+              'speechId': excerptIdList[i]['speechId'],
+              'fragment': excerptIdList[i]['fragment'],
+            });
+          }
+        }
+      }
     });
+
     connection.close();
   }
 
