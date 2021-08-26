@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:postgres/postgres.dart';
+import 'package:spektrum/speaker.dart';
 
 import 'authentication.dart';
 import 'database.dart';
@@ -25,7 +26,9 @@ extension MenuOptionExtension on MenuOption {
           contactPage.onShowChangeUserNameDialog(user);
         };
       case MenuOption.profileImage:
-        return (BuildContext context, _ContactPageState contactPage, SpektrumUser user) {};
+        return (BuildContext context, _ContactPageState contactPage, SpektrumUser user) {
+          contactPage.onShowChangeProfileImageDialog(user);
+        };
       case MenuOption.logOut:
         return (BuildContext context, _ContactPageState contactPage, SpektrumUser user) async {
           await FirebaseAuth.instance.signOut();
@@ -53,13 +56,14 @@ class _ContactPageState extends State<ContactPage> {
   Future<SpektrumUser> spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
 
   TextEditingController _newUserName = TextEditingController();
-  InputDecoration inputDecoration;
+  InputDecoration inputDecorationNewFriend;
+  InputDecoration inputDecorationChangeUserName;
 
   @override
   void initState() {
     super.initState();
 
-    Timer.periodic(Duration(seconds: 10), (timer) {
+    Timer.periodic(Duration(seconds: 5), (timer) {
       if (mounted) {
         setState(() {
           spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
@@ -68,8 +72,49 @@ class _ContactPageState extends State<ContactPage> {
     });
   }
 
+  void onShowChangeProfileImageDialog(SpektrumUser user) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        StateSetter setStateParent = setState;
+        return FutureBuilder(
+          future: Speaker.fetchAllSpeakerIds(),
+          builder: (BuildContext context, AsyncSnapshot<List<String>> snapshot) {
+            if (snapshot.hasData) {
+              List<String> speakerIdList = snapshot.data;
+              return AlertDialog(
+                  title: Text('profilbild wählen'),
+                  content: Container(
+                    width: 200,
+                    child: GridView.count(
+                      shrinkWrap: true,
+                      crossAxisCount: 3,
+                      children: List.generate(speakerIdList.length, (index) => IconButton(
+                          iconSize: MediaQuery.of(context).size.width / 3,
+                          onPressed: () async {
+                              await user.changeProfileImageId(speakerIdList[index]);
+                              Navigator.of(context).pop();
+                              setStateParent(() => user.profileImageId = speakerIdList[index]);
+                          },
+                          icon: ClipRRect(
+                            borderRadius: BorderRadius.circular(200.0),
+                            child: Image.asset('assets/portrait_id/${speakerIdList[index]}.jpg'),
+                          ),
+                      )),
+                    )
+                  ),
+              );
+            } else {
+              return SizedBox();
+            }
+          },
+        );
+      }
+    );
+  }
+
   void onShowChangeUserNameDialog(SpektrumUser user) {
-    inputDecoration = InputDecoration(
+    inputDecorationChangeUserName = InputDecoration(
       hintText: 'neuer benutzername',
       errorText: null,
     );
@@ -77,7 +122,7 @@ class _ContactPageState extends State<ContactPage> {
     void changeUserName(StateSetter setStateDialog, StateSetter setStateParent) async {
       if (_newUserName.text == null || _newUserName.text.isEmpty) {
         setStateDialog(() {
-          inputDecoration = InputDecoration(
+          inputDecorationChangeUserName = InputDecoration(
             hintText: 'neuer benutzername',
             errorText: 'bitte gib einen neuen benutzername ein.',
           );
@@ -86,7 +131,7 @@ class _ContactPageState extends State<ContactPage> {
       }
       if (_newUserName.text.length < 3) {
         setStateDialog(() {
-          inputDecoration = InputDecoration(
+          inputDecorationChangeUserName = InputDecoration(
             hintText: 'neuer benutzername',
             errorText: 'name muss mindestens 4 zeichen lang sein.',
           );
@@ -96,7 +141,7 @@ class _ContactPageState extends State<ContactPage> {
 
       if (_newUserName.text.length > 16) {
         setStateDialog(() {
-          inputDecoration = InputDecoration(
+          inputDecorationChangeUserName = InputDecoration(
             hintText: 'neuer benutzername',
             errorText: 'name darf höchstens 16 zeichen lang sein.',
           );
@@ -110,7 +155,7 @@ class _ContactPageState extends State<ContactPage> {
         setStateParent(() => user.userName = _newUserName.text);
       } on PostgreSQLException {
         setStateDialog(() {
-          inputDecoration = InputDecoration(
+          inputDecorationChangeUserName = InputDecoration(
             hintText: 'neuer benutzername',
             errorText: 'name konnte nicht geändert werden.',
           );
@@ -133,7 +178,7 @@ class _ContactPageState extends State<ContactPage> {
                       TextFormField(
                         keyboardType: TextInputType.name,
                         obscureText: false,
-                        decoration: inputDecoration,
+                        decoration: inputDecorationChangeUserName,
                         controller: _newUserName,
                         textInputAction: TextInputAction.done,
                         onEditingComplete: () => changeUserName(setStateDialog, setStateParent),
@@ -165,15 +210,16 @@ class _ContactPageState extends State<ContactPage> {
   }
 
   void onShowFriendRequestDialog(SpektrumUser user) {
-    inputDecoration = InputDecoration(
+    inputDecorationNewFriend = InputDecoration(
       hintText: 'e-mail adresse',
       errorText: null,
     );
+    StateSetter setStateParent = setState;
 
-    void sendFriendRequest(StateSetter setStateDialog, StateSetter setStateParent) async {
+    void sendFriendRequest(StateSetter setStateDialog) async {
       if (_newUserName.text == null || _newUserName.text.isEmpty) {
         setStateDialog(() {
-          inputDecoration = InputDecoration(
+          inputDecorationNewFriend = InputDecoration(
             hintText: 'e-mail adresse',
             errorText: 'bitte gib deine e-mail adresse ein.',
           );
@@ -182,7 +228,7 @@ class _ContactPageState extends State<ContactPage> {
       }
       if (!_newUserName.text.contains('@')) {
         setStateDialog(() {
-          inputDecoration = InputDecoration(
+          inputDecorationNewFriend = InputDecoration(
             hintText: 'e-mail adresse',
             errorText: 'bitte gib eine korrekte e-mail adresse ein.',
           );
@@ -192,11 +238,11 @@ class _ContactPageState extends State<ContactPage> {
 
       try {
         await user.sendFriendRequest(_newUserName.text.toLowerCase());
-        Navigator.of(context).pop();
         setStateParent(() => user.pendingFriendRequestList.add(_newUserName.text.toLowerCase()));
+        Navigator.of(context).pop();
       } on PostgreSQLException {
         setStateDialog(() {
-          inputDecoration = InputDecoration(
+          inputDecorationNewFriend = InputDecoration(
             hintText: 'e-mail adresse',
             errorText: 'nutzer wurde nicht gefunden.',
           );
@@ -207,7 +253,6 @@ class _ContactPageState extends State<ContactPage> {
     showDialog(
         context: context,
         builder: (BuildContext context) {
-          StateSetter setStateParent = setState;
           return AlertDialog(
             title: Text('freund:in hinzufügen.'),
             content: StatefulBuilder(
@@ -219,10 +264,10 @@ class _ContactPageState extends State<ContactPage> {
                       TextFormField(
                         keyboardType: TextInputType.emailAddress,
                         obscureText: false,
-                        decoration: inputDecoration,
+                        decoration: inputDecorationNewFriend,
                         controller: _newUserName,
                         textInputAction: TextInputAction.done,
-                        onEditingComplete: () => sendFriendRequest(setStateDialog, setStateParent),
+                        onEditingComplete: () => sendFriendRequest(setStateDialog),
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -236,7 +281,7 @@ class _ContactPageState extends State<ContactPage> {
                           Container(
                             padding: EdgeInsets.all(10),
                             child: ElevatedButton(
-                                onPressed: () => sendFriendRequest(setStateDialog, setStateParent),
+                                onPressed: () => sendFriendRequest(setStateDialog),
                                 child: Text('bestätigen', textScaleFactor: 0.9)),
                           ),
                         ],
@@ -323,7 +368,7 @@ class _ContactPageState extends State<ContactPage> {
                 children: [
                   Container(
                     padding: EdgeInsets.only(
-                      top: 40,
+                      top: MediaQuery.of(context).padding.top + 50,
                       bottom: 20,
                       left: 20,
                       right: 20,
@@ -333,34 +378,72 @@ class _ContactPageState extends State<ContactPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               PopupMenuButton<MenuOption>(
-                                icon: Icon(Icons.person),
-                                iconSize: 50,
+                                offset: Offset(-MediaQuery.of(context).size.width / 5, MediaQuery.of(context).size.width / 6),
+                                icon: user.profileImageId == null ? Icon(Icons.person) : ClipRRect(
+                                  borderRadius: BorderRadius.circular(200.0),
+                                  child: Image.asset('assets/portrait_id/${user.profileImageId}.jpg'),
+                                ),
+                                iconSize: MediaQuery.of(context).size.width / 6,
                                 onSelected: (MenuOption selected) {
                                   selected.action(context, this, user);
                                 },
                                 itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuOption>>[
                                   PopupMenuItem(
-                                    value: MenuOption.userName,
-                                    child: Text(user.userName),
+                                    value: MenuOption.profileImage,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        IconButton(
+                                          onPressed: null,
+                                          icon: user.profileImageId == null ? Icon(Icons.person) : ClipRRect(
+                                            borderRadius: BorderRadius.circular(200.0),
+                                            child: Image.asset('assets/portrait_id/${user.profileImageId}.jpg'),
+                                          ),
+                                          iconSize: 40,
+                                        ),
+                                        Icon(Icons.edit_rounded),
+                                      ],
+                                    ),
                                   ),
                                   PopupMenuItem(
-                                    value: MenuOption.profileImage,
-                                    child: Text('profilbild ändern'),
+                                    value: MenuOption.userName,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(user.userName),
+                                        Icon(Icons.edit_rounded),
+                                      ],
+                                    ),
                                   ),
                                   PopupMenuItem(
                                     value: MenuOption.logOut,
-                                    child: Text('abmelden'),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text('abmelden'),
+                                        Icon(Icons.login_rounded),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
                             ],
                           ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                user.userName,
+                                textScaleFactor: 1.2,
+                              ),
+                            ],
+                          ),
                           Container(
                             padding: EdgeInsets.only(
-                              top: 25,
+                              top: MediaQuery.of(context).size.height / 5,
                               bottom: 50,
                             ),
                             child: Text(
@@ -468,7 +551,18 @@ class _ContactPageState extends State<ContactPage> {
               );
             } else {
               return SizedBox(
-                child: CircularProgressIndicator(),
+                child: Container(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).size.height / 5,
+                    bottom: 50,
+                  ),
+                  child: Text(
+                    'spektrum',
+                    textScaleFactor: 3,
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                  ),
+                  alignment: Alignment.bottomCenter,
+                ),
                 width: 60,
                 height: 60,
               );
@@ -489,6 +583,7 @@ class SpektrumUser {
   List<String> openGameList;
   List<String> challengeList;
   List<String> challengeSentList;
+  String profileImageId;
 
   SpektrumUser(
       {this.userId,
@@ -498,13 +593,14 @@ class SpektrumUser {
       this.pendingFriendRequestList,
       this.challengeList,
       this.challengeSentList,
-      this.openGameList});
+      this.openGameList,
+      this.profileImageId});
 
   static Future<SpektrumUser> getUserById(String userId) async {
     final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
     await connection.open();
     final List<Map<String, dynamic>> userMap = await connection.mappedResultsQuery('''
-      SELECT name
+      SELECT name, profile_image_id
       FROM spektrum_user
       WHERE id = @userId
       ''', substitutionValues: {'userId': userId});
@@ -542,6 +638,7 @@ class SpektrumUser {
     return SpektrumUser(
       userId: userId,
       userName: userMap[0]['spektrum_user']['name'],
+      profileImageId: userMap[0]['spektrum_user']['profile_image_id'],
       contactList: List<String>.from(friendMap.map((row) => row['friend']['user_friend']).toList()),
       friendRequestList: List<String>.from(friendRequestMap.map((row) => row['friend_request']['sender']).toList()),
       pendingFriendRequestList:
@@ -550,6 +647,30 @@ class SpektrumUser {
       challengeSentList: List<String>.from(challengeSentMap.map((row) => row['game_request']['receiver']).toList()),
       openGameList: List<String>.from(openGameMap.map((row) => row['game']['other_player']).toList()),
     );
+  }
+
+  static Future<String> fetchProfileImageId(String userId) async {
+    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
+    await connection.open();
+    final List<Map<String, dynamic>> map = await connection.mappedResultsQuery('''
+      SELECT profile_image_id
+      FROM spektrum_user
+      WHERE id = @userId
+      ''', substitutionValues: {'userId': userId});
+    connection.close();
+    return map[0]['spektrum_user']['profile_image_id'];
+  }
+
+  static Future<String> fetchUserName(String userId) async {
+    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
+    await connection.open();
+    final List<Map<String, dynamic>> map = await connection.mappedResultsQuery('''
+      SELECT name
+      FROM spektrum_user
+      WHERE id = @userId
+      ''', substitutionValues: {'userId': userId});
+    connection.close();
+    return map[0]['spektrum_user']['name'];
   }
 
   Future<void> createUser() async {
@@ -579,6 +700,20 @@ class SpektrumUser {
     connection.close();
   }
 
+  Future<void> changeProfileImageId(String newProfileImageId) async {
+    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
+    await connection.open();
+    await connection.query('''
+      UPDATE spektrum_user
+      SET profile_image_id = @newProfileImageId
+      WHERE id = @userId
+    ''', substitutionValues: {
+      'userId': userId,
+      'newProfileImageId': newProfileImageId,
+    });
+    connection.close();
+  }
+
   Future<void> sendFriendRequest(String targetUserId) async {
     try {
       final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
@@ -597,7 +732,7 @@ class SpektrumUser {
         });
         bool isAlreadyRequested = map[0]['']['exists'];
         if (!isAlreadyRequested) {
-          await connection.query('''
+          await ctx.query('''
             INSERT INTO friend_request (sender, receiver)
             VALUES (@userId, @targetUserId)
           ''', substitutionValues: {

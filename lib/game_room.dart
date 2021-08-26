@@ -40,7 +40,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
   void initState() {
     super.initState();
 
-    Timer.periodic(Duration(seconds: 10), (timer) {
+    Timer.periodic(Duration(seconds: 5), (timer) {
       if (mounted) {
         setState(() {
           totalDistances = Result.fetchCurrentTotalDistance(opponent);
@@ -56,34 +56,43 @@ class _GameRoomPageState extends State<GameRoomPage> {
       ),
       child: FutureBuilder(
         future: totalDistances,
-        builder: (BuildContext context, AsyncSnapshot<Map<String, double>> snapshot) {
+        builder: (BuildContext context,
+            AsyncSnapshot<Map<String, double>> snapshot) {
           if (snapshot.hasData) {
-            double progressValue = snapshot.data[player] / 60; // 50 arbitrary, use 90 for perfect [0, 1] interval.
-            Animation<Color> indicatorColor = AlwaysStoppedAnimation<Color>(Colors.black);
+            double progressValue = snapshot.data[player] /
+                60; // 60 arbitrary, use 90 for perfect [0, 1] interval.
+            Animation<Color> indicatorColor =
+                AlwaysStoppedAnimation<Color>(Colors.black);
             if (progressValue == 0.0) {
               progressValue = 0.01;
             }
-            indicatorColor = AlwaysStoppedAnimation<Color>(Color.lerp(Colors.green, Colors.red, progressValue));
-            return Column(
+            indicatorColor = AlwaysStoppedAnimation<Color>(
+                Color.lerp(Colors.green, Colors.red, progressValue));
+            return Row(
               children: [
-                SizedBox(
-                  height: MediaQuery.of(context).size.height / 3,
-                  width: 10,
-                  child: RotatedBox(
-                    quarterTurns: -3,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                      child: LinearProgressIndicator(
-                        value: progressValue,
-                        valueColor: indicatorColor,
-                        backgroundColor: Colors.transparent,
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height / 3,
+                      width: 10,
+                      child: RotatedBox(
+                        quarterTurns: -3,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          child: LinearProgressIndicator(
+                            value: progressValue,
+                            valueColor: indicatorColor,
+                            backgroundColor: Colors.transparent,
+                          ),
+                        ),
                       ),
-                    )
-                  ),
-                ),
-                Text(
-                  snapshot.data[player].toStringAsFixed(2),
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      snapshot.data[player].toStringAsFixed(2),
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
               ],
             );
@@ -91,7 +100,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
             return Column(
               children: [
                 SizedBox(
-                  height: 400,
+                  height: MediaQuery.of(context).size.height / 3,
                   width: 10,
                 ),
                 Text(
@@ -107,25 +116,29 @@ class _GameRoomPageState extends State<GameRoomPage> {
   }
 
   Future<ElevatedButton> getGameRoomActionButton() async {
-    int loggedInUserGameId = await Excerpt.getGameId(FirebaseAuth.instance.currentUser.email, opponent);
-    int opponentGameId = await Excerpt.getGameId(opponent, FirebaseAuth.instance.currentUser.email);
-    bool isLoggedInUserGameFinished = await Result.fetchGameFinished(loggedInUserGameId);
-    bool isOpponentGameFinished = await Result.fetchGameFinished(opponentGameId);
+    int loggedInUserGameId = await Excerpt.getGameId(
+        FirebaseAuth.instance.currentUser.email, opponent);
+    int opponentGameId = await Excerpt.getGameId(
+        opponent, FirebaseAuth.instance.currentUser.email);
+    bool isLoggedInUserGameFinished =
+        await Result.fetchGameFinished(loggedInUserGameId);
+    bool isOpponentGameFinished =
+        await Result.fetchGameFinished(opponentGameId);
 
-    SpektrumUser user = await SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+    SpektrumUser user =
+        await SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
     if (isLoggedInUserGameFinished && isOpponentGameFinished) {
       return ElevatedButton(
           onPressed: () {
             user.sendChallenge(opponent);
             Navigator.of(context).pop();
           },
-          child: Text('erneut herausfordern')
-      );
+          child: Text('erneut herausfordern'));
     } else {
       return ElevatedButton(
-          onPressed: () => onStartGame(FirebaseAuth.instance.currentUser.email, opponent),
-          child: Text('spielen')
-      );
+          onPressed: () =>
+              onStartGame(FirebaseAuth.instance.currentUser.email, opponent),
+          child: Text('spielen'));
     }
   }
 
@@ -143,25 +156,118 @@ class _GameRoomPageState extends State<GameRoomPage> {
           Padding(
             padding: EdgeInsets.only(top: 100),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Column(
                   children: [
-                    Icon(
-                      Icons.person,
-                      size: 50,
+                    FutureBuilder(
+                      future: SpektrumUser.fetchProfileImageId(
+                          FirebaseAuth.instance.currentUser.email),
+                      builder: (BuildContext context,
+                          AsyncSnapshot<String> snapshot) {
+                        if (snapshot.hasData) {
+                          return IconButton(
+                            icon: ClipRRect(
+                              borderRadius: BorderRadius.circular(200.0),
+                              child: Image.asset(
+                                  'assets/portrait_id/${snapshot.data}.jpg'),
+                            ),
+                            iconSize: 50,
+                            onPressed: null,
+                          );
+                        } else {
+                          return Icon(
+                            Icons.person,
+                            size: 50,
+                          );
+                        }
+                      },
                     ),
-                    Text(FirebaseAuth.instance.currentUser.email),
-                    getDistanceIndicator(FirebaseAuth.instance.currentUser.email),
+                    FutureBuilder(
+                      future: SpektrumUser.fetchUserName(
+                          FirebaseAuth.instance.currentUser.email),
+                      builder: (BuildContext context,
+                          AsyncSnapshot<String> snapshot) {
+                        if (snapshot.hasData) {
+                          // return Text(snapshot.data);
+                          return SizedBox(
+                            width: 100.0,
+                            child: Center(
+                              child: Text(
+                                snapshot.data,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          );
+                        } else {
+                          return SizedBox(
+                            width: 100.0,
+                            child: Center(
+                              child: Text(
+                                FirebaseAuth.instance.currentUser.email,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    getDistanceIndicator(
+                        FirebaseAuth.instance.currentUser.email),
                   ],
                 ),
                 Column(
                   children: [
-                    Icon(
-                      Icons.person,
-                      size: 50,
+                    FutureBuilder(
+                      future: SpektrumUser.fetchProfileImageId(opponent),
+                      builder: (BuildContext context,
+                          AsyncSnapshot<String> snapshot) {
+                        if (snapshot.hasData) {
+                          return IconButton(
+                            icon: ClipRRect(
+                              borderRadius: BorderRadius.circular(200.0),
+                              child: Image.asset(
+                                  'assets/portrait_id/${snapshot.data}.jpg'),
+                            ),
+                            iconSize: 50,
+                            onPressed: null,
+                          );
+                        } else {
+                          return IconButton(
+                            icon: Icon(Icons.person),
+                            iconSize: 50,
+                            onPressed: null,
+                          );
+                        }
+                      },
                     ),
-                    Text(opponent),
+                    FutureBuilder(
+                      future: SpektrumUser.fetchUserName(opponent),
+                      builder: (BuildContext context,
+                          AsyncSnapshot<String> snapshot) {
+                        if (snapshot.hasData) {
+                          return SizedBox(
+                            width: 100.0,
+                            child: Center(
+                              child: Text(
+                                snapshot.data,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          );
+                        } else {
+                          return SizedBox(
+                            width: 100.0,
+                            child: Center(
+                              child: Text(
+                                opponent,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    ),
                     getDistanceIndicator(opponent),
                   ],
                 ),
@@ -172,15 +278,16 @@ class _GameRoomPageState extends State<GameRoomPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               FutureBuilder(
-                future: getGameRoomActionButton(),
-                builder: (BuildContext context, AsyncSnapshot<ElevatedButton> snapshot) {
-                  if (snapshot.hasData) {
-                    return snapshot.data;
-                  } else {
-                    return ElevatedButton(onPressed: null, child: Text('lädt...'));
-                  }
-                }
-              ),
+                  future: getGameRoomActionButton(),
+                  builder: (BuildContext context,
+                      AsyncSnapshot<ElevatedButton> snapshot) {
+                    if (snapshot.hasData) {
+                      return snapshot.data;
+                    } else {
+                      return ElevatedButton(
+                          onPressed: null, child: Text('lädt...'));
+                    }
+                  }),
             ],
           ),
         ],

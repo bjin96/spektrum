@@ -16,17 +16,9 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final Future<FirebaseApp> _initialization = Firebase.initializeApp();
-  Widget _app = MaterialApp(
-    title: 'spektrum',
-    theme: ThemeData(
-      primarySwatch: Colors.blueGrey,
-      fontFamily: 'RobotoMono',
-    ),
-    home: Scaffold(
-      body: Center(
-        child: Text('lädt...'),
-      ),
+  Widget _home = Scaffold(
+    body: Center(
+      child: Container(),
     ),
   );
 
@@ -37,19 +29,12 @@ class _MyAppState extends State<MyApp> {
       DeviceOrientation.portraitDown,
     ]);
     return FutureBuilder(
-      future: _initialization,
+      future: Firebase.initializeApp(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return MaterialApp(
-            title: 'spektrum',
-            theme: ThemeData(
-              primarySwatch: Colors.blueGrey,
-              fontFamily: 'RobotoMono',
-            ),
-            home: Scaffold(
-              body: Center(
-                child: Text(snapshot.error.toString()),
-              ),
+          _home = Scaffold(
+            body: Center(
+              child: Text(snapshot.error.toString()),
             ),
           );
         }
@@ -57,26 +42,19 @@ class _MyAppState extends State<MyApp> {
         if (snapshot.connectionState == ConnectionState.done) {
           User user = FirebaseAuth.instance.currentUser;
           if (user == null) {
-            _app = MaterialApp(
-              title: 'spektrum',
-              theme: ThemeData(
-                primarySwatch: Colors.blueGrey,
-                fontFamily: 'RobotoMono',
-              ),
-              home: AuthenticationPage(),
-            );
+            _home = AuthenticationPage();
           } else {
-            _app = MaterialApp(
-              title: 'spektrum',
-              theme: ThemeData(
-                primarySwatch: Colors.blueGrey,
-                fontFamily: 'RobotoMono',
-              ),
-              home: ContactPage(),
-            );
+            _home = ContactPage();
           }
         }
-        return _app;
+        return MaterialApp(
+            title: 'spektrum',
+            theme: ThemeData(
+              primarySwatch: Colors.blueGrey,
+              fontFamily: 'RobotoMono',
+            ),
+            home: _home,
+        );
       },
     );
   }
