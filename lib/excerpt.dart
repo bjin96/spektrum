@@ -36,6 +36,7 @@ class Excerpt {
     final List<Map<String, dynamic>> maps = await connection.mappedResultsQuery('''
         SELECT speech_id, fragment
         FROM excerpt
+        WHERE report_count < 3
         ORDER BY RANDOM()
         LIMIT 3;
         ''');
@@ -122,5 +123,18 @@ class Excerpt {
         ''', substitutionValues: {'loggedInPlayer': loggedInPlayer, 'otherPlayer': otherPlayer});
     connection.close();
     return maps[0]['game']['id'];
+  }
+
+  void report() async {
+    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
+    await connection.open();
+    await connection.execute(
+        '''
+        UPDATE excerpt
+        SET report_count = report_count + 1
+        WHERE speech_id = @speechId AND fragment = @fragment
+        ''', substitutionValues: {'speechId': speechId, 'fragment': fragment}
+    );
+    connection.close();
   }
 }

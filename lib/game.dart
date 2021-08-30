@@ -184,6 +184,7 @@ class _MyHomePageState extends State<MyHomePage>
   PageController pageController;
   String opponent;
   int pageNumber;
+  bool alreadyReported = false;
 
   _MyHomePageState(Excerpt excerpt, int gameId, Result result,
       PageController pageController, String opponent, int pageNumber) {
@@ -229,6 +230,13 @@ class _MyHomePageState extends State<MyHomePage>
     }
 
     return _onSubmitExcerpt;
+  }
+
+  void onSubmitReport(StateSetter setState) {
+    setState(() {
+      alreadyReported = true;
+    });
+    excerpt.report();
   }
 
   @override
@@ -329,6 +337,16 @@ class _MyHomePageState extends State<MyHomePage>
                                   excerpt.content,
                                   textScaleFactor: 1,
                                   style: TextStyle(color: Colors.black),
+                                ),
+                                // Currently allows same user to report multiple times due to re-opening the game.
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    IconButton(
+                                        icon: Icon(Icons.bug_report_outlined),
+                                        onPressed: alreadyReported ? null : () => onSubmitReport(setState),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
