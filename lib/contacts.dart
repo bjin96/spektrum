@@ -305,7 +305,17 @@ class _ContactPageState extends State<ContactPage> {
   }
 
   Widget getFriendActionButton(SpektrumUser user, String targetUserId) {
-    if (user.challengeList.contains(targetUserId)) {
+    if (user.friendRequestList.contains(targetUserId)) {
+      return IconButton(
+        icon: Icon(Icons.add),
+        onPressed: () => onFriendRequestAccepted(user, targetUserId),
+      );
+    } else if (user.pendingFriendRequestList.contains(targetUserId)) {
+      return IconButton(
+        icon: Icon(Icons.mail_outline),
+        onPressed: null,
+      );
+    } else if (user.challengeList.contains(targetUserId)) {
       return IconButton(
         icon: Icon(Icons.check),
         onPressed: () async {
@@ -382,7 +392,7 @@ class _ContactPageState extends State<ContactPage> {
                             children: [
                               PopupMenuButton<MenuOption>(
                                 offset: Offset(-MediaQuery.of(context).size.width / 5, MediaQuery.of(context).size.width / 6),
-                                icon: user.profileImageId == null ? Icon(Icons.person) : ClipRRect(
+                                icon: user.profileImageId == null ? Icon(Icons.person_pin) : ClipRRect(
                                   borderRadius: BorderRadius.circular(200.0),
                                   child: Image.asset('assets/portrait_id/${user.profileImageId}.jpg'),
                                 ),
@@ -398,7 +408,7 @@ class _ContactPageState extends State<ContactPage> {
                                       children: [
                                         IconButton(
                                           onPressed: null,
-                                          icon: user.profileImageId == null ? Icon(Icons.person) : ClipRRect(
+                                          icon: user.profileImageId == null ? Icon(Icons.person_pin) : ClipRRect(
                                             borderRadius: BorderRadius.circular(200.0),
                                             child: Image.asset('assets/portrait_id/${user.profileImageId}.jpg'),
                                           ),
@@ -453,25 +463,11 @@ class _ContactPageState extends State<ContactPage> {
                             ),
                             alignment: Alignment.bottomCenter,
                           ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'freund:innen',
-                                textScaleFactor: 1.1,
-                                style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
-                              ),
-                              IconButton(
-                                onPressed: () => onShowFriendRequestDialog(user),
-                                icon: Icon(Icons.person_add),
-                              ),
-                            ],
-                          ),
                           Flexible(
                             child: ListView.builder(
-                                itemCount: user.contactList.length,
+                                itemCount: user.openGameList.length,
                                 itemBuilder: (BuildContext context, int index) {
-                                  String targetUserId = user.contactList[index];
+                                  String targetUserId = user.openGameList[index];
                                   return Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
@@ -490,55 +486,35 @@ class _ContactPageState extends State<ContactPage> {
                       top: 100,
                       left: 20,
                       right: 20,
-                      bottom: 20,
+                      bottom: 0,
                     ),
                     child: Center(
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'freundschaftseinladungen',
-                                textScaleFactor: 1.1,
+                                'freund:innen',
+                                textScaleFactor: 2.0,
                                 style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                              ),
+                              IconButton(
+                                onPressed: () => onShowFriendRequestDialog(user),
+                                icon: Icon(Icons.person_add_outlined),
                               ),
                             ],
                           ),
-                          Flexible(
+                          Expanded(
                             child: ListView.builder(
-                                itemCount: user.friendRequestList.length,
+                                itemCount: user.contactList.length,
                                 itemBuilder: (BuildContext context, int index) {
+                                  String targetUserId = user.contactList[index];
                                   return Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(user.friendRequestList[index]),
-                                      ElevatedButton(
-                                          onPressed: () => onFriendRequestAccepted(user, user.friendRequestList[index]),
-                                          child: Text('annehmen', textScaleFactor: 0.8)),
-                                    ],
-                                  );
-                                }),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Text(
-                                'ausstehende freundschaftseinladungen',
-                                textScaleFactor: 1.1,
-                                style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          Flexible(
-                            child: ListView.builder(
-                                itemCount: user.pendingFriendRequestList.length,
-                                itemBuilder: (BuildContext context, int index) {
-                                  return Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: [
-                                      Text(user.pendingFriendRequestList[index]),
+                                      Text(targetUserId),
+                                      getFriendActionButton(user, targetUserId),
                                     ],
                                   );
                                 }),
@@ -633,16 +609,27 @@ class SpektrumUser {
       SELECT other_player
       FROM game
       WHERE logged_in_player = @userId
+        AND finished = false
       ''', substitutionValues: {'userId': userId});
     connection.close();
+
+    List<String> sortedContactList = List<String>.from(friendMap.map((row) => row['friend']['user_friend']).toList());
+    sortedContactList.sort();
+
+    List<String> friendRequestList = List<String>.from(friendRequestMap.map((row) => row['friend_request']['sender']).toList());
+    List<String> pendingFriendRequestList = List<String>.from(pendingFriendRequestMap.map((row) => row['friend_request']['receiver']).toList());
+    List<String> contactListWithRequests = [];
+    contactListWithRequests.addAll(friendRequestList);
+    contactListWithRequests.addAll(pendingFriendRequestList);
+    contactListWithRequests.addAll(sortedContactList);
+
     return SpektrumUser(
       userId: userId,
       userName: userMap[0]['spektrum_user']['name'],
       profileImageId: userMap[0]['spektrum_user']['profile_image_id'],
-      contactList: List<String>.from(friendMap.map((row) => row['friend']['user_friend']).toList()),
-      friendRequestList: List<String>.from(friendRequestMap.map((row) => row['friend_request']['sender']).toList()),
-      pendingFriendRequestList:
-          List<String>.from(pendingFriendRequestMap.map((row) => row['friend_request']['receiver']).toList()),
+      contactList: contactListWithRequests,
+      friendRequestList: friendRequestList,
+      pendingFriendRequestList: pendingFriendRequestList,
       challengeList: List<String>.from(challengeMap.map((row) => row['game_request']['sender']).toList()),
       challengeSentList: List<String>.from(challengeSentMap.map((row) => row['game_request']['receiver']).toList()),
       openGameList: List<String>.from(openGameMap.map((row) => row['game']['other_player']).toList()),
