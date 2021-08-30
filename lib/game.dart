@@ -69,6 +69,7 @@ class _GamePage extends State<GamePage> {
                   gameId: _gameId,
                   pageController: controller,
                   opponent: opponent,
+                  pageNumber: 1,
                 );
               } else {
                 return Scaffold(
@@ -97,6 +98,7 @@ class _GamePage extends State<GamePage> {
                   gameId: _gameId,
                   pageController: controller,
                   opponent: opponent,
+                  pageNumber: 2,
                 );
               } else {
                 return Scaffold(
@@ -125,6 +127,7 @@ class _GamePage extends State<GamePage> {
                   gameId: _gameId,
                   pageController: controller,
                   opponent: opponent,
+                  pageNumber: 3,
                 );
               } else {
                 return Scaffold(
@@ -154,7 +157,8 @@ class MyHomePage extends StatefulWidget {
       this.gameId,
       this.result,
       this.pageController,
-      this.opponent})
+      this.opponent,
+      this.pageNumber})
       : super(key: key);
 
   final Excerpt excerpt;
@@ -162,10 +166,11 @@ class MyHomePage extends StatefulWidget {
   final int gameId;
   final PageController pageController;
   final String opponent;
+  final int pageNumber;
 
   @override
   _MyHomePageState createState() =>
-      _MyHomePageState(excerpt, gameId, result, pageController, opponent);
+      _MyHomePageState(excerpt, gameId, result, pageController, opponent, pageNumber);
 }
 
 class _MyHomePageState extends State<MyHomePage>
@@ -178,14 +183,16 @@ class _MyHomePageState extends State<MyHomePage>
   double _currentSocioCulturalValue = 0;
   PageController pageController;
   String opponent;
+  int pageNumber;
 
   _MyHomePageState(Excerpt excerpt, int gameId, Result result,
-      PageController pageController, String opponent) {
+      PageController pageController, String opponent, int pageNumber) {
     this.excerpt = excerpt;
     this.gameId = gameId;
     this.result = result;
     this.pageController = pageController;
     this.opponent = opponent;
+    this.pageNumber = pageNumber;
 
     if (result != null) {
       _showCorrection = true;
@@ -264,14 +271,37 @@ class _MyHomePageState extends State<MyHomePage>
           children: <Widget>[
             Center(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: pageNumber == 1 ? Icon(Icons.circle) : Icon(Icons.brightness_1_outlined),
+                        disabledColor: Colors.blueGrey,
+                        iconSize: 10,
+                        onPressed: null,
+                      ),
+                      IconButton(
+                        icon: pageNumber == 2 ? Icon(Icons.circle) : Icon(Icons.brightness_1_outlined),
+                        disabledColor: Colors.blueGrey,
+                        iconSize: 10,
+                        onPressed: null,
+                      ),
+                      IconButton(
+                        icon: pageNumber == 3 ? Icon(Icons.circle) : Icon(Icons.brightness_1_outlined),
+                        disabledColor: Colors.blueGrey,
+                        iconSize: 10,
+                        onPressed: null,
+                      ),
+                    ],
+                  ),
                   Center(
                     child: Container(
                       padding: EdgeInsets.only(
                         left: 15,
                         right: 15,
-                        top: 50,
+                        top: 10,
                         bottom: 30,
                       ),
                       child: Text(
