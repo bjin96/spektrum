@@ -177,8 +177,8 @@ class _GameRoomPageState extends State<GameRoomPage> {
                           );
                         } else {
                           return Icon(
-                            Icons.person,
-                            size: 50,
+                            Icons.person_pin,
+                            size: 65,
                           );
                         }
                       },
@@ -234,8 +234,8 @@ class _GameRoomPageState extends State<GameRoomPage> {
                           );
                         } else {
                           return IconButton(
-                            icon: Icon(Icons.person),
-                            iconSize: 50,
+                            icon: Icon(Icons.person_pin),
+                            iconSize: 65,
                             onPressed: null,
                           );
                         }
