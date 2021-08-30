@@ -46,6 +46,7 @@ dev_dependencies:
 flutter:
   assets:
     - assets/portrait_id/
+    - assets/icons/
   fonts:
     - family: RobotoMono
       fonts:
