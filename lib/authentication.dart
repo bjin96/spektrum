@@ -18,6 +18,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
   TextEditingController _mail = TextEditingController();
   TextEditingController _password = TextEditingController();
   bool _isRegisterMode = false;
+  bool _wrongCredentials = false;
 
   void registerUser() async {
     if (_formKey.currentState.validate()) {
@@ -52,7 +53,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
     }
   }
 
-  void signIn() async {
+  void signIn(StateSetter setState) async {
     if (_formKey.currentState.validate()) {
       try {
         await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -64,6 +65,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
           MaterialPageRoute(builder: (context) => ContactPage()),
         );
       } on FirebaseAuthException catch (e) {
+        setState(() => _wrongCredentials = true);
         if (e.code == 'user-not-found') {
           print('No user found for that email.');
         } else if (e.code == 'wrong-password') {
@@ -102,7 +104,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Container(
-                    padding: EdgeInsets.only(top: 10, left: 50, right: 50, bottom: 10),
+                    padding: EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 10),
                     child: TextFormField(
                       keyboardType: TextInputType.emailAddress,
                       obscureText: false,
@@ -121,7 +123,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                     ),
                   ),
                   Container(
-                    padding: EdgeInsets.only(top: 10, left: 50, right: 50, bottom: 10),
+                    padding: EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 10),
                     child: TextFormField(
                       obscureText: true,
                       style: TextStyle(),
@@ -139,13 +141,13 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                       },
                       controller: _password,
                       textInputAction: _isRegisterMode ? TextInputAction.next : TextInputAction.done,
-                      onEditingComplete: _isRegisterMode ? null : () => {signIn()},
+                      onEditingComplete: _isRegisterMode ? null : () => {signIn(setState)},
                     ),
                   ),
                   Visibility(
                     visible: _isRegisterMode,
                     child: Container(
-                      padding: EdgeInsets.only(top: 10, left: 50, right: 50, bottom: 10),
+                      padding: EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 10),
                       child: TextFormField(
                         obscureText: true,
                         style: TextStyle(),
@@ -164,48 +166,53 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                     ),
                   ),
                   Visibility(
-                    visible: !_isRegisterMode,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(10),
-                          child: ElevatedButton(
-                            child: Text('anmelden'),
-                            onPressed: () => {signIn()},
-                          ),
+                      visible: _wrongCredentials,
+                      child: Container(
+                        alignment: Alignment.centerLeft,
+                        padding: EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 10),
+                        child: Text(
+                          'benutzername oder password falsch.',
+                          style: TextStyle(color: Colors.red[700], fontSize: 12),
                         ),
-                        Container(
-                          padding: EdgeInsets.all(10),
-                          child: TextButton(
-                            child: Text('noch keinen account?'),
+                      ),
+                  ),
+                  Visibility(
+                    visible: !_isRegisterMode,
+                    child: Container(
+                      padding: EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            child: Text('noch keinen account?', style: TextStyle(fontSize: 12)),
                             onPressed: () => setState(() => _isRegisterMode = true),
                           ),
-                        ),
-                      ],
+                          ElevatedButton(
+                            child: Text('anmelden', style: TextStyle(fontSize: 12)),
+                            onPressed: () => {signIn(setState)},
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   Visibility(
                     visible: _isRegisterMode,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(10),
-                          child: ElevatedButton(
-                            child: Text('registrieren'),
-                            onPressed: () => {registerUser()},
-                          ),
-                        ),
-                        Container(
-                          padding: EdgeInsets.all(10),
-                          child: TextButton(
-                            child: Text('bereits einen account?'),
+                    child: Container(
+                      padding: EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            child: Text('bereits einen account?', style: TextStyle(fontSize: 12)),
                             onPressed: () => setState(() => _isRegisterMode = false),
                           ),
-                        ),
-                      ],
-                    ),
+                          ElevatedButton(
+                            child: Text('registrieren', style: TextStyle(fontSize: 12)),
+                            onPressed: () => {registerUser()},
+                          ),
+                        ],
+                      ),
+                    )
                   ),
                 ],
               ),
