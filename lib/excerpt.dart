@@ -49,19 +49,18 @@ class Excerpt {
           counter: responseExcerptList[i]['counter'],
           topic: responseExcerptList[i]['topic'],
           bio: responseExcerptList[i]['bio'],
-          speakerId: responseExcerptList[i]['speakerId']
-      );
+          speakerId: responseExcerptList[i]['speakerId']);
     });
   }
 
   static Future<int> getGameId(String loggedInPlayer, String otherPlayer) async {
-    final Map<String, dynamic> body = { 'loggedInPlayer': loggedInPlayer, 'otherPlayer': otherPlayer };
+    final Map<String, dynamic> body = {'loggedInPlayer': loggedInPlayer, 'otherPlayer': otherPlayer};
     final Map<String, dynamic> json = await ApiConnection.post('/game/getGameId', body);
     return json['gameId'];
   }
 
   void report() async {
-    final Map<String, dynamic> body = { 'speechId': speechId, 'fragment': fragment };
+    final Map<String, dynamic> body = {'speechId': speechId, 'fragment': fragment};
     await ApiConnection.post('/excerpt/report', body);
   }
 }

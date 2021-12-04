@@ -35,8 +35,7 @@ class _GamePage extends State<GamePage> {
   _GamePage({this.opponent});
 
   Future<bool> fetchGameData() async {
-    _gameId = await Excerpt.getGameId(
-        FirebaseAuth.instance.currentUser.email, opponent);
+    _gameId = await Excerpt.getGameId(FirebaseAuth.instance.currentUser.email, opponent);
     _excerptList = await Excerpt.getExcerptListForGame(_gameId);
     _resultList = await Result.fetchResultsByGameId(_gameId);
     return true;
@@ -152,13 +151,7 @@ class _GamePage extends State<GamePage> {
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage(
-      {Key key,
-      this.excerpt,
-      this.gameId,
-      this.result,
-      this.pageController,
-      this.opponent,
-      this.pageNumber})
+      {Key key, this.excerpt, this.gameId, this.result, this.pageController, this.opponent, this.pageNumber})
       : super(key: key);
 
   final Excerpt excerpt;
@@ -169,12 +162,10 @@ class MyHomePage extends StatefulWidget {
   final int pageNumber;
 
   @override
-  _MyHomePageState createState() =>
-      _MyHomePageState(excerpt, gameId, result, pageController, opponent, pageNumber);
+  _MyHomePageState createState() => _MyHomePageState(excerpt, gameId, result, pageController, opponent, pageNumber);
 }
 
-class _MyHomePageState extends State<MyHomePage>
-    with AutomaticKeepAliveClientMixin<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMixin<MyHomePage> {
   Excerpt excerpt;
   bool _showCorrection = false;
   int gameId;
@@ -186,8 +177,8 @@ class _MyHomePageState extends State<MyHomePage>
   int pageNumber;
   bool alreadyReported = false;
 
-  _MyHomePageState(Excerpt excerpt, int gameId, Result result,
-      PageController pageController, String opponent, int pageNumber) {
+  _MyHomePageState(
+      Excerpt excerpt, int gameId, Result result, PageController pageController, String opponent, int pageNumber) {
     this.excerpt = excerpt;
     this.gameId = gameId;
     this.result = result;
@@ -206,8 +197,7 @@ class _MyHomePageState extends State<MyHomePage>
   bool get wantKeepAlive => true;
 
   double calculateEuclideanDistance() {
-    return sqrt(pow(
-            _currentSocioCulturalValue - excerpt.socioCulturalCoordinate, 2) +
+    return sqrt(pow(_currentSocioCulturalValue - excerpt.socioCulturalCoordinate, 2) +
         pow(_currentSocioEconomicValue - excerpt.socioEconomicCoordinate, 2));
   }
 
@@ -272,8 +262,7 @@ class _MyHomePageState extends State<MyHomePage>
         body: GridView.count(
           childAspectRatio: MediaQuery.of(context).size.width /
               (MediaQuery.of(context).size.height -
-                  (MediaQuery.of(context).padding.top +
-                      MediaQuery.of(context).padding.bottom)) *
+                  (MediaQuery.of(context).padding.top + MediaQuery.of(context).padding.bottom)) *
               2,
           crossAxisCount: 1,
           children: <Widget>[
@@ -315,9 +304,7 @@ class _MyHomePageState extends State<MyHomePage>
                       child: Text(
                         excerpt.topic,
                         textScaleFactor: 1.3,
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blueGrey),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -331,8 +318,7 @@ class _MyHomePageState extends State<MyHomePage>
                             padding: EdgeInsets.all(15),
                             child: Column(
                               children: [
-                                Icon(Icons.format_quote_rounded,
-                                    size: 30, color: Colors.blueGrey),
+                                Icon(Icons.format_quote_rounded, size: 30, color: Colors.blueGrey),
                                 Text(
                                   excerpt.content,
                                   textScaleFactor: 1,
@@ -343,8 +329,8 @@ class _MyHomePageState extends State<MyHomePage>
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     IconButton(
-                                        icon: Icon(Icons.bug_report_outlined),
-                                        onPressed: alreadyReported ? null : () => onSubmitReport(setState),
+                                      icon: Icon(Icons.bug_report_outlined),
+                                      onPressed: alreadyReported ? null : () => onSubmitReport(setState),
                                     ),
                                   ],
                                 ),
@@ -370,13 +356,11 @@ class _MyHomePageState extends State<MyHomePage>
                 children: [
                   Text(
                     'soziokulturelle achse',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
                   ),
                   Visibility(
                     child: Container(
-                      padding: EdgeInsets.only(
-                          left: 20, right: 20, top: 0, bottom: 0),
+                      padding: EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 0),
                       child: Slider(
                         value: _currentSocioCulturalValue,
                         min: -10,
@@ -394,30 +378,23 @@ class _MyHomePageState extends State<MyHomePage>
                   ),
                   Visibility(
                     child: Container(
-                      padding: EdgeInsets.only(
-                          left: 20, right: 20, top: 0, bottom: 0),
+                      padding: EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 0),
                       child: RangeSlider(
-                        values: _currentSocioCulturalValue <
-                                excerpt.socioCulturalCoordinate
-                            ? RangeValues(_currentSocioCulturalValue,
-                                excerpt.socioCulturalCoordinate.toDouble())
-                            : RangeValues(
-                                excerpt.socioCulturalCoordinate.toDouble(),
-                                _currentSocioCulturalValue),
+                        values: _currentSocioCulturalValue < excerpt.socioCulturalCoordinate
+                            ? RangeValues(_currentSocioCulturalValue, excerpt.socioCulturalCoordinate.toDouble())
+                            : RangeValues(excerpt.socioCulturalCoordinate.toDouble(), _currentSocioCulturalValue),
                         min: -10,
                         max: 10,
                         divisions: 20,
                         labels: RangeLabels(
-                            _currentSocioCulturalValue.round().toString(),
-                            excerpt.socioCulturalCoordinate.toString()),
+                            _currentSocioCulturalValue.round().toString(), excerpt.socioCulturalCoordinate.toString()),
                         onChanged: null,
                       ),
                     ),
                     visible: _showCorrection,
                   ),
                   Container(
-                    padding: EdgeInsets.only(
-                        left: 20, right: 20, top: 0, bottom: 50),
+                    padding: EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 50),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [Text('liberal'), Text('konservativ')],
@@ -425,13 +402,11 @@ class _MyHomePageState extends State<MyHomePage>
                   ),
                   Text(
                     'sozioökonomische achse',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
                   ),
                   Visibility(
                     child: Container(
-                      padding: EdgeInsets.only(
-                          left: 20, right: 20, top: 0, bottom: 0),
+                      padding: EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 0),
                       child: Slider(
                         value: _currentSocioEconomicValue,
                         min: -10,
@@ -449,30 +424,23 @@ class _MyHomePageState extends State<MyHomePage>
                   ),
                   Visibility(
                     child: Container(
-                      padding: EdgeInsets.only(
-                          left: 20, right: 20, top: 0, bottom: 0),
+                      padding: EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 0),
                       child: RangeSlider(
-                        values: _currentSocioEconomicValue <
-                                excerpt.socioEconomicCoordinate
-                            ? RangeValues(_currentSocioEconomicValue,
-                                excerpt.socioEconomicCoordinate.toDouble())
-                            : RangeValues(
-                                excerpt.socioEconomicCoordinate.toDouble(),
-                                _currentSocioEconomicValue),
+                        values: _currentSocioEconomicValue < excerpt.socioEconomicCoordinate
+                            ? RangeValues(_currentSocioEconomicValue, excerpt.socioEconomicCoordinate.toDouble())
+                            : RangeValues(excerpt.socioEconomicCoordinate.toDouble(), _currentSocioEconomicValue),
                         min: -10,
                         max: 10,
                         divisions: 20,
                         labels: RangeLabels(
-                            _currentSocioEconomicValue.round().toString(),
-                            excerpt.socioEconomicCoordinate.toString()),
+                            _currentSocioEconomicValue.round().toString(), excerpt.socioEconomicCoordinate.toString()),
                         onChanged: null,
                       ),
                     ),
                     visible: _showCorrection,
                   ),
                   Container(
-                    padding: EdgeInsets.only(
-                        left: 20, right: 20, top: 0, bottom: 20),
+                    padding: EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [Text('staat'), Text('markt')],
@@ -480,10 +448,7 @@ class _MyHomePageState extends State<MyHomePage>
                   ),
                   Visibility(
                     child: ElevatedButton(
-                        onPressed: _showCorrection
-                            ? null
-                            : onSubmitExcerpt(excerpt.counter),
-                        child: Text('fertig')),
+                        onPressed: _showCorrection ? null : onSubmitExcerpt(excerpt.counter), child: Text('fertig')),
                     visible: !_showCorrection,
                   ),
                   Visibility(
@@ -493,8 +458,7 @@ class _MyHomePageState extends State<MyHomePage>
                           iconSize: 75,
                           icon: ClipRRect(
                             borderRadius: BorderRadius.circular(200.0),
-                            child: Image.asset(
-                                'assets/portrait_id/${excerpt.speakerId}.jpg'),
+                            child: Image.asset('assets/portrait_id/${excerpt.speakerId}.jpg'),
                           ),
                           onPressed: () {
                             return showDialog(
@@ -509,10 +473,8 @@ class _MyHomePageState extends State<MyHomePage>
                                         IconButton(
                                           iconSize: 75,
                                           icon: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(200.0),
-                                            child: Image.asset(
-                                                'assets/portrait_id/${excerpt.speakerId}.jpg'),
+                                            borderRadius: BorderRadius.circular(200.0),
+                                            child: Image.asset('assets/portrait_id/${excerpt.speakerId}.jpg'),
                                           ),
                                           onPressed: null,
                                         ),
@@ -521,18 +483,18 @@ class _MyHomePageState extends State<MyHomePage>
                                             padding: EdgeInsets.only(bottom: 20),
                                             child: Text(
                                               '${excerpt.speakerFirstName} ${excerpt.speakerLastName} (${excerpt.party})',
-                                              style: TextStyle(color: excerpt.party == 'FDP' ? Colors.black : Colors.white),
+                                              style: TextStyle(
+                                                  color: excerpt.party == 'FDP' ? Colors.black : Colors.white),
                                             ),
                                           ),
                                         ),
                                         Flexible(
                                           child: SingleChildScrollView(
                                             child: Text(
-                                              excerpt.bio != null
-                                                  ? excerpt.bio
-                                                  : '',
+                                              excerpt.bio != null ? excerpt.bio : '',
                                               textScaleFactor: 0.8,
-                                              style: TextStyle(color: excerpt.party == 'FDP' ? Colors.black : Colors.white),
+                                              style: TextStyle(
+                                                  color: excerpt.party == 'FDP' ? Colors.black : Colors.white),
                                             ),
                                           ),
                                         )

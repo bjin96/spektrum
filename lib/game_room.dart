@@ -56,18 +56,14 @@ class _GameRoomPageState extends State<GameRoomPage> {
       ),
       child: FutureBuilder(
         future: totalDistances,
-        builder: (BuildContext context,
-            AsyncSnapshot<Map<String, double>> snapshot) {
+        builder: (BuildContext context, AsyncSnapshot<Map<String, double>> snapshot) {
           if (snapshot.hasData) {
-            double progressValue = snapshot.data[player] /
-                60; // 60 arbitrary, use 90 for perfect [0, 1] interval.
-            Animation<Color> indicatorColor =
-                AlwaysStoppedAnimation<Color>(Colors.black);
+            double progressValue = snapshot.data[player] / 60; // 60 arbitrary, use 90 for perfect [0, 1] interval.
+            Animation<Color> indicatorColor = AlwaysStoppedAnimation<Color>(Colors.black);
             if (progressValue == 0.0) {
               progressValue = 0.01;
             }
-            indicatorColor = AlwaysStoppedAnimation<Color>(
-                Color.lerp(Colors.green, Colors.red, progressValue));
+            indicatorColor = AlwaysStoppedAnimation<Color>(Color.lerp(Colors.green, Colors.red, progressValue));
             return Row(
               children: [
                 Column(
@@ -116,17 +112,12 @@ class _GameRoomPageState extends State<GameRoomPage> {
   }
 
   Future<ElevatedButton> getGameRoomActionButton() async {
-    int loggedInUserGameId = await Excerpt.getGameId(
-        FirebaseAuth.instance.currentUser.email, opponent);
-    int opponentGameId = await Excerpt.getGameId(
-        opponent, FirebaseAuth.instance.currentUser.email);
-    bool isLoggedInUserGameFinished =
-        await Result.fetchGameFinished(loggedInUserGameId);
-    bool isOpponentGameFinished =
-        await Result.fetchGameFinished(opponentGameId);
+    int loggedInUserGameId = await Excerpt.getGameId(FirebaseAuth.instance.currentUser.email, opponent);
+    int opponentGameId = await Excerpt.getGameId(opponent, FirebaseAuth.instance.currentUser.email);
+    bool isLoggedInUserGameFinished = await Result.fetchGameFinished(loggedInUserGameId);
+    bool isOpponentGameFinished = await Result.fetchGameFinished(opponentGameId);
 
-    SpektrumUser user =
-        await SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+    SpektrumUser user = await SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
     if (isLoggedInUserGameFinished && isOpponentGameFinished) {
       return ElevatedButton(
           onPressed: () {
@@ -136,9 +127,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
           child: Text('erneut herausfordern'));
     } else {
       return ElevatedButton(
-          onPressed: () =>
-              onStartGame(FirebaseAuth.instance.currentUser.email, opponent),
-          child: Text('spielen'));
+          onPressed: () => onStartGame(FirebaseAuth.instance.currentUser.email, opponent), child: Text('spielen'));
     }
   }
 
@@ -161,16 +150,13 @@ class _GameRoomPageState extends State<GameRoomPage> {
                 Column(
                   children: [
                     FutureBuilder(
-                      future: SpektrumUser.fetchProfileImageId(
-                          FirebaseAuth.instance.currentUser.email),
-                      builder: (BuildContext context,
-                          AsyncSnapshot<String> snapshot) {
+                      future: SpektrumUser.fetchProfileImageId(FirebaseAuth.instance.currentUser.email),
+                      builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
                         if (snapshot.hasData) {
                           return IconButton(
                             icon: ClipRRect(
                               borderRadius: BorderRadius.circular(200.0),
-                              child: Image.asset(
-                                  'assets/portrait_id/${snapshot.data}.jpg'),
+                              child: Image.asset('assets/portrait_id/${snapshot.data}.jpg'),
                             ),
                             iconSize: 50,
                             onPressed: null,
@@ -184,10 +170,8 @@ class _GameRoomPageState extends State<GameRoomPage> {
                       },
                     ),
                     FutureBuilder(
-                      future: SpektrumUser.fetchUserName(
-                          FirebaseAuth.instance.currentUser.email),
-                      builder: (BuildContext context,
-                          AsyncSnapshot<String> snapshot) {
+                      future: SpektrumUser.fetchUserName(FirebaseAuth.instance.currentUser.email),
+                      builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
                         if (snapshot.hasData) {
                           // return Text(snapshot.data);
                           return SizedBox(
@@ -212,22 +196,19 @@ class _GameRoomPageState extends State<GameRoomPage> {
                         }
                       },
                     ),
-                    getDistanceIndicator(
-                        FirebaseAuth.instance.currentUser.email),
+                    getDistanceIndicator(FirebaseAuth.instance.currentUser.email),
                   ],
                 ),
                 Column(
                   children: [
                     FutureBuilder(
                       future: SpektrumUser.fetchProfileImageId(opponent),
-                      builder: (BuildContext context,
-                          AsyncSnapshot<String> snapshot) {
+                      builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
                         if (snapshot.hasData) {
                           return IconButton(
                             icon: ClipRRect(
                               borderRadius: BorderRadius.circular(200.0),
-                              child: Image.asset(
-                                  'assets/portrait_id/${snapshot.data}.jpg'),
+                              child: Image.asset('assets/portrait_id/${snapshot.data}.jpg'),
                             ),
                             iconSize: 50,
                             onPressed: null,
@@ -243,8 +224,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
                     ),
                     FutureBuilder(
                       future: SpektrumUser.fetchUserName(opponent),
-                      builder: (BuildContext context,
-                          AsyncSnapshot<String> snapshot) {
+                      builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
                         if (snapshot.hasData) {
                           return SizedBox(
                             width: 100.0,
@@ -279,13 +259,11 @@ class _GameRoomPageState extends State<GameRoomPage> {
             children: [
               FutureBuilder(
                   future: getGameRoomActionButton(),
-                  builder: (BuildContext context,
-                      AsyncSnapshot<ElevatedButton> snapshot) {
+                  builder: (BuildContext context, AsyncSnapshot<ElevatedButton> snapshot) {
                     if (snapshot.hasData) {
                       return snapshot.data;
                     } else {
-                      return ElevatedButton(
-                          onPressed: null, child: Text('lädt...'));
+                      return ElevatedButton(onPressed: null, child: Text('lädt...'));
                     }
                   }),
             ],

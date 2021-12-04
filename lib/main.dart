@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:spektrum/authentication.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 import 'contacts.dart';
 
@@ -48,12 +48,12 @@ class _MyAppState extends State<MyApp> {
           }
         }
         return MaterialApp(
-            title: 'spektrum',
-            theme: ThemeData(
-              primarySwatch: Colors.blueGrey,
-              fontFamily: 'RobotoMono',
-            ),
-            home: _home,
+          title: 'spektrum',
+          theme: ThemeData(
+            primarySwatch: Colors.blueGrey,
+            fontFamily: 'RobotoMono',
+          ),
+          home: _home,
         );
       },
     );
