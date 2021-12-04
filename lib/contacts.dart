@@ -5,11 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:postgres/postgres.dart';
+import 'package:spektrum/api_connection.dart';
 import 'package:spektrum/speaker.dart';
 
 import 'authentication.dart';
-import 'database.dart';
-import 'excerpt.dart';
 import 'game_room.dart';
 
 enum MenuOption {
@@ -573,370 +572,62 @@ class SpektrumUser {
       this.profileImageId});
 
   static Future<SpektrumUser> getUserById(String userId) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    final List<Map<String, dynamic>> userMap = await connection.mappedResultsQuery('''
-      SELECT name, profile_image_id
-      FROM spektrum_user
-      WHERE id = @userId
-      ''', substitutionValues: {'userId': userId});
-    final List<Map<String, dynamic>> friendMap = await connection.mappedResultsQuery('''
-      SELECT user_friend
-      FROM friend
-      WHERE logged_in_user = @userId
-      ''', substitutionValues: {'userId': userId});
-    final List<Map<String, dynamic>> friendRequestMap = await connection.mappedResultsQuery('''
-      SELECT sender
-      FROM friend_request
-      WHERE receiver = @userId
-      ''', substitutionValues: {'userId': userId});
-    final List<Map<String, dynamic>> pendingFriendRequestMap = await connection.mappedResultsQuery('''
-      SELECT receiver
-      FROM friend_request
-      WHERE sender = @userId
-      ''', substitutionValues: {'userId': userId});
-    final List<Map<String, dynamic>> challengeSentMap = await connection.mappedResultsQuery('''
-      SELECT receiver
-      FROM game_request
-      WHERE sender = @userId
-      ''', substitutionValues: {'userId': userId});
-    final List<Map<String, dynamic>> challengeMap = await connection.mappedResultsQuery('''
-      SELECT sender
-      FROM game_request
-      WHERE receiver = @userId
-      ''', substitutionValues: {'userId': userId});
-    final List<Map<String, dynamic>> openGameMap = await connection.mappedResultsQuery('''
-      SELECT other_player
-      FROM game
-      WHERE logged_in_player = @userId
-        AND finished = false
-      ''', substitutionValues: {'userId': userId});
-    connection.close();
-
-    List<String> sortedContactList = List<String>.from(friendMap.map((row) => row['friend']['user_friend']).toList());
-    sortedContactList.sort();
-
-    List<String> friendRequestList = List<String>.from(friendRequestMap.map((row) => row['friend_request']['sender']).toList());
-    List<String> pendingFriendRequestList = List<String>.from(pendingFriendRequestMap.map((row) => row['friend_request']['receiver']).toList());
-    List<String> contactListWithRequests = [];
-    contactListWithRequests.addAll(friendRequestList);
-    contactListWithRequests.addAll(pendingFriendRequestList);
-    contactListWithRequests.addAll(sortedContactList);
-
+    final Map<String, dynamic> json = await ApiConnection.get('/user/$userId');
     return SpektrumUser(
-      userId: userId,
-      userName: userMap[0]['spektrum_user']['name'],
-      profileImageId: userMap[0]['spektrum_user']['profile_image_id'],
-      contactList: contactListWithRequests,
-      friendRequestList: friendRequestList,
-      pendingFriendRequestList: pendingFriendRequestList,
-      challengeList: List<String>.from(challengeMap.map((row) => row['game_request']['sender']).toList()),
-      challengeSentList: List<String>.from(challengeSentMap.map((row) => row['game_request']['receiver']).toList()),
-      openGameList: List<String>.from(openGameMap.map((row) => row['game']['other_player']).toList()),
+      userId: json['userId'],
+      userName: json['userName'],
+      profileImageId: json['profileImageId'],
+      contactList: List<String>.from(json['contactList']),
+      friendRequestList: List<String>.from(json['friendRequestList']),
+      pendingFriendRequestList: List<String>.from(json['pendingFriendRequestList']),
+      challengeList: List<String>.from(json['challengeList']),
+      challengeSentList: List<String>.from(json['challengeSentList']),
+      openGameList: List<String>.from(json['openGameList']),
     );
   }
 
   static Future<String> fetchProfileImageId(String userId) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    final List<Map<String, dynamic>> map = await connection.mappedResultsQuery('''
-      SELECT profile_image_id
-      FROM spektrum_user
-      WHERE id = @userId
-      ''', substitutionValues: {'userId': userId});
-    connection.close();
-    return map[0]['spektrum_user']['profile_image_id'];
+    final Map<String, dynamic> json = await ApiConnection.get('/user/$userId/profileImageId');
+    return json['profileImageId'];
   }
 
   static Future<String> fetchUserName(String userId) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    final List<Map<String, dynamic>> map = await connection.mappedResultsQuery('''
-      SELECT name
-      FROM spektrum_user
-      WHERE id = @userId
-      ''', substitutionValues: {'userId': userId});
-    connection.close();
-    return map[0]['spektrum_user']['name'];
+    final Map<String, dynamic> json = await ApiConnection.get('/user/$userId/userName');
+    return json['userName'];
   }
 
   Future<void> createUser() async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    await connection.query('''
-      INSERT INTO spektrum_user (id, name)
-      VALUES (@userId, @userName)
-    ''', substitutionValues: {
-      'userId': userId,
-      'userName': userName,
-    });
-    connection.close();
+    final Map<String, dynamic> body = { 'userId': userId, 'userName': userName };
+    await ApiConnection.post('/user/createUser', body);
   }
 
   Future<void> changeUserName(String newUserName) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    await connection.query('''
-      UPDATE spektrum_user
-      SET name = @newUserName
-      WHERE id = @userId
-    ''', substitutionValues: {
-      'userId': userId,
-      'newUserName': newUserName,
-    });
-    connection.close();
+    final Map<String, dynamic> body = { 'userId': userId, 'newUserName': newUserName };
+    await ApiConnection.post('/user/changeUserName', body);
   }
 
   Future<void> changeProfileImageId(String newProfileImageId) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    await connection.query('''
-      UPDATE spektrum_user
-      SET profile_image_id = @newProfileImageId
-      WHERE id = @userId
-    ''', substitutionValues: {
-      'userId': userId,
-      'newProfileImageId': newProfileImageId,
-    });
-    connection.close();
+    final Map<String, dynamic> body = { 'userId': userId, 'newProfileImageId': newProfileImageId };
+    await ApiConnection.post('/user/changeProfileImageId', body);
   }
 
   Future<void> sendFriendRequest(String targetUserId) async {
-    try {
-      final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-      await connection.open();
-      await connection.transaction((ctx) async {
-        final List<Map<String, dynamic>> map = await ctx.mappedResultsQuery('''
-            SELECT EXISTS(
-              SELECT sender, receiver
-              FROM friend_request
-              WHERE sender = @targetUserId
-                AND receiver = @userId
-            )
-            ''', substitutionValues: {
-          'userId': userId,
-          'targetUserId': targetUserId,
-        });
-        bool isAlreadyRequested = map[0]['']['exists'];
-        if (!isAlreadyRequested) {
-          await ctx.query('''
-            INSERT INTO friend_request (sender, receiver)
-            VALUES (@userId, @targetUserId)
-          ''', substitutionValues: {
-            'userId': userId,
-            'targetUserId': targetUserId,
-          });
-        } else {
-          await ctx.query('''
-            DELETE FROM friend_request
-            WHERE receiver = @userId
-            AND sender = @targetUserId
-          ''', substitutionValues: {
-            'userId': userId,
-            'targetUserId': targetUserId,
-          });
-          await ctx.query('''
-            INSERT INTO friend (logged_in_user, user_friend)
-            VALUES (@userId, @targetUserId)
-          ''', substitutionValues: {
-            'userId': userId,
-            'targetUserId': targetUserId,
-          });
-          await ctx.query('''
-            INSERT INTO friend (logged_in_user, user_friend)
-            VALUES (@targetUserId, @userId)
-          ''', substitutionValues: {
-            'userId': userId,
-            'targetUserId': targetUserId,
-          });
-        }
-      });
-      connection.close();
-    } catch (e) {
-      rethrow;
-    }
+    final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId };
+    await ApiConnection.post('/user/sendFriendRequest', body);
   }
 
   Future<void> acceptFriendRequest(String targetUserId) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    await connection.transaction((ctx) async {
-      await ctx.query('''
-      DELETE FROM friend_request
-      WHERE receiver = @userId
-      AND sender = @targetUserId
-    ''', substitutionValues: {
-        'userId': userId,
-        'targetUserId': targetUserId,
-      });
-      await ctx.query('''
-        INSERT INTO friend (logged_in_user, user_friend)
-        VALUES (@userId, @targetUserId)
-      ''', substitutionValues: {
-        'userId': userId,
-        'targetUserId': targetUserId,
-      });
-      await ctx.query('''
-        INSERT INTO friend (logged_in_user, user_friend)
-        VALUES (@targetUserId, @userId)
-      ''', substitutionValues: {
-        'userId': userId,
-        'targetUserId': targetUserId,
-      });
-    });
-    connection.close();
+    final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId};
+    await ApiConnection.post('/user/acceptFriendRequest', body);
   }
 
   Future<void> sendChallenge(String targetUserId) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    await connection.transaction((ctx) async {
-      final List<Map<String, dynamic>> map = await ctx.mappedResultsQuery('''
-      SELECT EXISTS(
-        SELECT sender, receiver
-        FROM game_request
-        WHERE sender = @targetUserId
-          AND receiver = @userId
-      )
-      ''', substitutionValues: {
-        'userId': userId,
-        'targetUserId': targetUserId,
-      });
-      bool isAlreadyChallenged = map[0]['']['exists'];
-      if (!isAlreadyChallenged) {
-        await ctx.query('''
-          INSERT INTO game_request (sender, receiver)
-          VALUES (@userId, @targetUserId)
-        ''', substitutionValues: {
-          'userId': userId,
-          'targetUserId': targetUserId,
-        });
-      } else {
-        await ctx.query('''
-          DELETE FROM game_request
-          WHERE receiver = @userId
-          AND sender = @targetUserId
-        ''', substitutionValues: {
-          'userId': userId,
-          'targetUserId': targetUserId,
-        });
-        await ctx.query('''
-          INSERT INTO game (logged_in_player, other_player)
-          VALUES (@userId, @targetUserId)
-        ''', substitutionValues: {
-          'userId': userId,
-          'targetUserId': targetUserId,
-        });
-        await ctx.query('''
-          INSERT INTO game (game_created, logged_in_player, other_player)
-          VALUES (
-          (
-            SELECT game_created
-            FROM game
-            WHERE logged_in_player = @userId
-            AND other_player = @targetUserId
-            AND finished = false
-          ), @targetUserId, @userId)
-        ''', substitutionValues: {
-          'userId': userId,
-          'targetUserId': targetUserId,
-        });
-        final List<Map<String, dynamic>> gameMap = await ctx.mappedResultsQuery('''
-        SELECT id
-        FROM game
-        WHERE (
-          (
-            logged_in_player = @loggedInPlayer
-            AND other_player = @otherPlayer
-          ) OR (
-            logged_in_player = @otherPlayer
-            AND other_player = @loggedInPlayer
-          )
-        )
-        AND finished = false
-        ''', substitutionValues: {'loggedInPlayer': userId, 'otherPlayer': targetUserId});
-        List<Map<String, dynamic>> excerptIdList = await Excerpt.getRandomExcerptIdList();
-        for (int i = 0; i < excerptIdList.length; i++) {
-          for (Map<String, dynamic> row in gameMap) {
-            await ctx.query('''
-            INSERT INTO game_excerpt (game_id, counter, speech_id, fragment)
-            VALUES (@gameId, @counter, @speechId, @fragment)
-            ''', substitutionValues: {
-              'gameId': row['game']['id'],
-              'counter': i,
-              'speechId': excerptIdList[i]['speechId'],
-              'fragment': excerptIdList[i]['fragment'],
-            });
-          }
-        }
-      }
-    });
-
-    connection.close();
+    final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId };
+    await ApiConnection.post('/user/sendChallenge', body);
   }
 
   Future<void> acceptChallenge(String targetUserId) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    await connection.transaction((ctx) async {
-      await ctx.query('''
-      DELETE FROM game_request
-      WHERE receiver = @userId
-      AND sender = @targetUserId
-    ''', substitutionValues: {
-        'userId': userId,
-        'targetUserId': targetUserId,
-      });
-      await ctx.query('''
-        INSERT INTO game (logged_in_player, other_player)
-        VALUES (@userId, @targetUserId)
-      ''', substitutionValues: {
-        'userId': userId,
-        'targetUserId': targetUserId,
-      });
-      await ctx.query('''
-        INSERT INTO game (game_created, logged_in_player, other_player)
-        VALUES (
-        (
-          SELECT game_created
-          FROM game
-          WHERE logged_in_player = @userId
-          AND other_player = @targetUserId
-          AND finished = false
-        ), @targetUserId, @userId)
-      ''', substitutionValues: {
-        'userId': userId,
-        'targetUserId': targetUserId,
-      });
-      final List<Map<String, dynamic>> gameMap = await ctx.mappedResultsQuery('''
-      SELECT id
-      FROM game
-      WHERE (
-        (
-          logged_in_player = @loggedInPlayer
-          AND other_player = @otherPlayer
-        ) OR (
-          logged_in_player = @otherPlayer
-          AND other_player = @loggedInPlayer
-        )
-      )
-      AND finished = false
-      ''', substitutionValues: {'loggedInPlayer': userId, 'otherPlayer': targetUserId});
-      List<Map<String, dynamic>> excerptIdList = await Excerpt.getRandomExcerptIdList();
-      for (int i = 0; i < excerptIdList.length; i++) {
-        for (Map<String, dynamic> row in gameMap) {
-          await ctx.query('''
-            INSERT INTO game_excerpt (game_id, counter, speech_id, fragment)
-            VALUES (@gameId, @counter, @speechId, @fragment)
-            ''', substitutionValues: {
-            'gameId': row['game']['id'],
-            'counter': i,
-            'speechId': excerptIdList[i]['speechId'],
-            'fragment': excerptIdList[i]['fragment'],
-          });
-        }
-      }
-    });
-    connection.close();
+    final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId };
+    await ApiConnection.post('/user/acceptChallenge', body);
   }
 }

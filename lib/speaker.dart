@@ -1,19 +1,9 @@
-import 'package:postgres/postgres.dart';
-
-import 'database.dart';
+import 'api_connection.dart';
 
 class Speaker {
 
   static Future<List<String>> fetchAllSpeakerIds() async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    final List<Map<String, dynamic>> maps = await connection.mappedResultsQuery('''
-        SELECT DISTINCT id
-        FROM speaker
-    ''');
-    connection.close();
-    return List.generate(maps.length, (i) {
-      return maps[i]['speaker']['id'];
-    });
+    final Map<String, dynamic> json = await ApiConnection.get('/speaker/fetchAllSpeakerIds');
+    return json['speakerList'];
   }
 }

@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:postgres/postgres.dart';
 
-import 'database.dart';
+import 'api_connection.dart';
 import 'excerpt.dart';
 
 class Result {
@@ -41,65 +40,41 @@ class Result {
   }
 
   static void setGameFinished(String opponent) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    await connection.query('''
-      UPDATE game
-      SET finished = true
-      WHERE logged_in_player = @currentUser AND other_player = @opponent
-      ''', substitutionValues: {'currentUser': FirebaseAuth.instance.currentUser.email, 'opponent': opponent});
-    connection.close();
+    final Map<String, dynamic> body = {
+      'currentUser': FirebaseAuth.instance.currentUser.email,
+      'opponent': opponent,
+    };
+    await ApiConnection.post('/result/setGameFinished', body);
   }
 
   static Future<bool> fetchGameFinished(int gameId) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    final List<Map<String, dynamic>> maps = await connection.mappedResultsQuery('''
-      SELECT finished
-      FROM game
-      WHERE id = @gameId;
-      ''', substitutionValues: {'gameId': gameId});
-    connection.close();
-    return maps[0]['game']['finished'];
+    final Map<String, dynamic> json = await ApiConnection.get('/game/fetchGameFinished/$gameId');
+    return json['is_game_finished'];
   }
 
   static Future<List<Result>> fetchResultsByGameId(int gameId) async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    final List<Map<String, dynamic>> maps = await connection.mappedResultsQuery('''
-      SELECT game_id, user_id, socio_cultural_coordinate, socio_economic_coordinate, distance
-      FROM result
-      WHERE game_id = @gameId;
-      ''', substitutionValues: {'gameId': gameId});
-    connection.close();
-    return List.generate(maps.length, (i) {
+    final Map<String, dynamic> json = await ApiConnection.get('/result/fetchResultsByGameId/$gameId');
+    return List.generate(json['resultList'].length, (i) {
       return Result(
-        gameId: maps[i]['result']['game_id'],
-        excerptCounter: maps[i]['result']['excerpt_counter'],
-        userId: maps[i]['result']['user_id'],
-        socioCulturalCoordinate: maps[i]['result']['socio_cultural_coordinate'],
-        socioEconomicCoordinate: maps[i]['result']['socio_economic_coordinate'],
-        distance: maps[i]['result']['distance'],
+        gameId: json['resultList'][i]['gameId'],
+        excerptCounter: json['resultList'][i]['excerptCounter'],
+        userId: json['resultList'][i]['userId'],
+        socioCulturalCoordinate: json['resultList'][i]['socioCulturalCoordinate'],
+        socioEconomicCoordinate: json['resultList'][i]['socioEconomicCoordinate'],
+        distance: json['resultList'][i]['distance'],
       );
     });
   }
 
   void store() async {
-    final PostgreSQLConnection connection = SpektrumDatabase.getDatabaseConnection();
-    await connection.open();
-    await connection.query('''
-        INSERT INTO result (
-          game_id, excerpt_counter, user_id, socio_cultural_coordinate, socio_economic_coordinate, distance
-        )
-        VALUES (@gameId, @excerptCounter, @userId, @socioCulturalCoordinate, @socioEconomicCoordinate, @distance);
-        ''', substitutionValues: {
+    final Map<String, dynamic> body = {
       'gameId': gameId,
       'excerptCounter': excerptCounter,
       'userId': userId,
       'socioCulturalCoordinate': socioCulturalCoordinate,
       'socioEconomicCoordinate': socioEconomicCoordinate,
       'distance': distance,
-    });
-    connection.close();
+    };
+    await ApiConnection.post('/game/getGameId', body);
   }
 }
