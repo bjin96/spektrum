@@ -19,9 +19,6 @@ class Game {
   }
 
   static void setFinished(gameId) async {
-    final Map<String, dynamic> body = {
-      'gameId': gameId
-    };
-    await ApiConnection.post('/result/setGameFinished', body);
+    await ApiConnection.get('/game/setGameFinished/$gameId');
   }
 }
