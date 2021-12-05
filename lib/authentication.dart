@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:spektrum/contacts.dart';
 
+import 'model/spektrum_user.dart';
+
 
 class AuthenticationPage extends StatefulWidget {
   const AuthenticationPage({Key key}) : super(key: key);
@@ -30,12 +32,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
         await SpektrumUser(
           userId: _mail.text.toLowerCase(),
           userName: _mail.text.toLowerCase(),
-          contactList: <String>[],
-          friendRequestList: <String>[],
-          pendingFriendRequestList: <String>[],
-          challengeList: <String>[],
-          challengeSentList: <String>[],
-          openGameList: <String>[],
+          profileImageId: '11003638',
         ).createUser();
         Navigator.pushReplacement(
           context,

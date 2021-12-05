@@ -3,9 +3,11 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:spektrum/result.dart';
+import 'package:spektrum/model/result.dart';
 
-import 'excerpt.dart';
+import 'model/excerpt.dart';
+import 'model/game.dart';
+import 'model/pageInfo.dart';
 
 const Map<String, Color> PARTY_COLOR = {
   'SPD': Color(0xffe2010f),
@@ -17,28 +19,23 @@ const Map<String, Color> PARTY_COLOR = {
 };
 
 class GamePage extends StatefulWidget {
-  GamePage({Key key, this.opponent}) : super(key: key);
+  GamePage({Key key, this.gameId}) : super(key: key);
 
-  final String opponent;
+  final int gameId;
 
   @override
-  _GamePage createState() => _GamePage(opponent: opponent);
+  _GamePage createState() => _GamePage(gameId);
 }
 
 class _GamePage extends State<GamePage> {
+  int gameId;
+
   PageController _pageController = PageController();
-  List<Excerpt> _excerptList;
-  List<Result> _resultList;
-  int _gameId;
-  final String opponent;
+  Future<GamePageInfo> gamePageInfoFuture;
 
-  _GamePage({this.opponent});
-
-  Future<bool> fetchGameData() async {
-    _gameId = await Excerpt.getGameId(FirebaseAuth.instance.currentUser.email, opponent);
-    _excerptList = await Excerpt.getExcerptListForGame(_gameId);
-    _resultList = await Result.fetchResultsByGameId(_gameId);
-    return true;
+  _GamePage(int gameId) {
+    this.gameId = gameId;
+    this.gamePageInfoFuture = GamePageInfo.getGamePageInfo(gameId);
   }
 
   @override
@@ -51,118 +48,77 @@ class _GamePage extends State<GamePage> {
   Widget build(BuildContext context) {
     final PageController controller = PageController(initialPage: 0);
 
-    return PageView(
-      scrollDirection: Axis.horizontal,
-      reverse: false,
-      controller: controller,
-      physics: NeverScrollableScrollPhysics(),
-      children: <Widget>[
-        Center(
-          child: FutureBuilder(
-            future: fetchGameData(),
-            builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
-              if (snapshot.hasData) {
-                return MyHomePage(
-                  excerpt: _excerptList[0],
-                  result: _resultList.length > 0 ? _resultList[0] : null,
-                  gameId: _gameId,
-                  pageController: controller,
-                  opponent: opponent,
-                  pageNumber: 1,
-                );
-              } else {
-                return Scaffold(
-                  body: Center(
-                    child: Container(
-                      child: Text(
-                        'spektrum',
-                        textScaleFactor: 3,
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
-                      ),
-                    ),
+    return FutureBuilder(
+        future: this.gamePageInfoFuture,
+        builder: (BuildContext context, AsyncSnapshot<GamePageInfo> snapshot) {
+          GamePageInfo gamePageInfo = snapshot.data;
+          if (snapshot.hasData) {
+            return PageView(
+              scrollDirection: Axis.horizontal,
+              reverse: false,
+              controller: controller,
+              physics: NeverScrollableScrollPhysics(),
+              children: <Widget>[
+                Center(
+                  child: MyHomePage(
+                    excerpt: gamePageInfo.excerptList[0],
+                    result: gamePageInfo.resultList.length > 0 ? gamePageInfo.resultList[0] : null,
+                    gameId: this.gameId,
+                    pageController: controller,
+                    pageNumber: 1,
                   ),
-                );
-              }
-            },
-          ),
-        ),
-        Center(
-          child: FutureBuilder(
-            future: fetchGameData(),
-            builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
-              if (snapshot.hasData) {
-                return MyHomePage(
-                  excerpt: _excerptList[1],
-                  result: _resultList.length > 1 ? _resultList[1] : null,
-                  gameId: _gameId,
-                  pageController: controller,
-                  opponent: opponent,
-                  pageNumber: 2,
-                );
-              } else {
-                return Scaffold(
-                  body: Center(
-                    child: Container(
-                      child: Text(
-                        'spektrum',
-                        textScaleFactor: 3,
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
-                      ),
-                    ),
+                ),
+                Center(
+                  child: MyHomePage(
+                    excerpt: gamePageInfo.excerptList[1],
+                    result: gamePageInfo.resultList.length > 1 ? gamePageInfo.resultList[1] : null,
+                    gameId: this.gameId,
+                    pageController: controller,
+                    pageNumber: 2,
                   ),
-                );
-              }
-            },
-          ),
-        ),
-        Center(
-          child: FutureBuilder(
-            future: fetchGameData(),
-            builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
-              if (snapshot.hasData) {
-                return MyHomePage(
-                  excerpt: _excerptList[2],
-                  result: _resultList.length > 2 ? _resultList[2] : null,
-                  gameId: _gameId,
-                  pageController: controller,
-                  opponent: opponent,
-                  pageNumber: 3,
-                );
-              } else {
-                return Scaffold(
-                  body: Center(
-                    child: Container(
-                      child: Text(
-                        'spektrum',
-                        textScaleFactor: 3,
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
-                      ),
-                    ),
+                ),
+                Center(
+                  child: MyHomePage(
+                    excerpt: gamePageInfo.excerptList[2],
+                    result: gamePageInfo.resultList.length > 2 ? gamePageInfo.resultList[2] : null,
+                    gameId: this.gameId,
+                    pageController: controller,
+                    pageNumber: 3,
                   ),
-                );
-              }
-            },
-          ),
-        ),
-      ],
+                ),
+              ],
+            );
+          } else {
+            return Scaffold(
+              body: Center(
+                child: Container(
+                  child: Text(
+                    'spektrum',
+                    textScaleFactor: 3,
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                  ),
+                ),
+              ),
+            );
+          }
+        }
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage(
-      {Key key, this.excerpt, this.gameId, this.result, this.pageController, this.opponent, this.pageNumber})
+      {Key key, this.excerpt, this.gameId, this.result, this.pageController, this.pageNumber})
       : super(key: key);
 
   final Excerpt excerpt;
   final Result result;
   final int gameId;
   final PageController pageController;
-  final String opponent;
   final int pageNumber;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState(excerpt, gameId, result, pageController, opponent, pageNumber);
+  _MyHomePageState createState() => _MyHomePageState(excerpt, gameId, result, pageController, pageNumber);
 }
 
 class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMixin<MyHomePage> {
@@ -178,12 +134,11 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
   bool alreadyReported = false;
 
   _MyHomePageState(
-      Excerpt excerpt, int gameId, Result result, PageController pageController, String opponent, int pageNumber) {
+      Excerpt excerpt, int gameId, Result result, PageController pageController, int pageNumber) {
     this.excerpt = excerpt;
     this.gameId = gameId;
     this.result = result;
     this.pageController = pageController;
-    this.opponent = opponent;
     this.pageNumber = pageNumber;
 
     if (result != null) {
@@ -212,7 +167,7 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
         distance: calculateEuclideanDistance(),
       ).store();
       if (pageController.page == 2) {
-        Result.setGameFinished(opponent);
+        Game.setFinished(gameId);
       }
       setState(() {
         _showCorrection = true;

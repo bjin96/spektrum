@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:postgres/postgres.dart';
-import 'package:spektrum/api_connection.dart';
-import 'package:spektrum/speaker.dart';
 
 import 'authentication.dart';
 import 'game_room.dart';
+import 'model/spektrum_user.dart';
+import 'model/pageInfo.dart';
 
 enum MenuOption {
   userName,
@@ -21,15 +21,15 @@ extension MenuOptionExtension on MenuOption {
   Function get action {
     switch (this) {
       case MenuOption.userName:
-        return (BuildContext context, _ContactPageState contactPage, SpektrumUser user) {
+        return (BuildContext context, _ContactPageState contactPage, SpektrumUser user, List<String> speakerIdList) {
           contactPage.onShowChangeUserNameDialog(user);
         };
       case MenuOption.profileImage:
-        return (BuildContext context, _ContactPageState contactPage, SpektrumUser user) {
-          contactPage.onShowChangeProfileImageDialog(user);
+        return (BuildContext context, _ContactPageState contactPage, SpektrumUser user, List<String> speakerIdList) {
+          contactPage.onShowChangeProfileImageDialog(user, speakerIdList);
         };
       case MenuOption.logOut:
-        return (BuildContext context, _ContactPageState contactPage, SpektrumUser user) async {
+        return (BuildContext context, _ContactPageState contactPage, SpektrumUser user, List<String> speakerIdList) async {
           await FirebaseAuth.instance.signOut();
           Navigator.pushReplacement(
             context,
@@ -52,7 +52,7 @@ class ContactPage extends StatefulWidget {
 class _ContactPageState extends State<ContactPage> {
   _ContactPageState();
 
-  Future<SpektrumUser> spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+  Future<ContactPageInfo> contactPageInfo = ContactPageInfo.getContactPageInfo(FirebaseAuth.instance.currentUser.email);
 
   TextEditingController _newUserName = TextEditingController();
   InputDecoration inputDecorationNewFriend;
@@ -62,51 +62,41 @@ class _ContactPageState extends State<ContactPage> {
   void initState() {
     super.initState();
 
-    Timer.periodic(Duration(seconds: 5), (timer) {
+    Timer.periodic(Duration(seconds: 60), (timer) {
       if (mounted) {
         setState(() {
-          spektrumUser = SpektrumUser.getUserById(FirebaseAuth.instance.currentUser.email);
+          contactPageInfo = ContactPageInfo.getContactPageInfo(FirebaseAuth.instance.currentUser.email);
         });
       }
     });
   }
 
-  void onShowChangeProfileImageDialog(SpektrumUser user) {
+  void onShowChangeProfileImageDialog(SpektrumUser user, List<String> speakerIdList) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         StateSetter setStateParent = setState;
-        return FutureBuilder(
-          future: Speaker.fetchAllSpeakerIds(),
-          builder: (BuildContext context, AsyncSnapshot<List<String>> snapshot) {
-            if (snapshot.hasData) {
-              List<String> speakerIdList = snapshot.data;
-              return AlertDialog(
-                  title: Text('profilbild wählen'),
-                  content: Container(
-                    width: 200,
-                    child: GridView.count(
-                      shrinkWrap: true,
-                      crossAxisCount: 3,
-                      children: List.generate(speakerIdList.length, (index) => IconButton(
-                          iconSize: MediaQuery.of(context).size.width / 3,
-                          onPressed: () async {
-                              await user.changeProfileImageId(speakerIdList[index]);
-                              Navigator.of(context).pop();
-                              setStateParent(() => user.profileImageId = speakerIdList[index]);
-                          },
-                          icon: ClipRRect(
-                            borderRadius: BorderRadius.circular(200.0),
-                            child: Image.asset('assets/portrait_id/${speakerIdList[index]}.jpg'),
-                          ),
-                      )),
-                    )
+        return AlertDialog(
+          title: Text('profilbild wählen'),
+          content: Container(
+              width: 200,
+              child: GridView.count(
+                shrinkWrap: true,
+                crossAxisCount: 3,
+                children: List.generate(speakerIdList.length, (index) => IconButton(
+                  iconSize: MediaQuery.of(context).size.width / 3,
+                  onPressed: () async {
+                    await user.changeProfileImageId(speakerIdList[index]);
+                    Navigator.of(context).pop();
+                    setStateParent(() => user.profileImageId = speakerIdList[index]);
+                  },
+                  icon: ClipRRect(
+                    borderRadius: BorderRadius.circular(200.0),
+                    child: Image.asset('assets/portrait_id/${speakerIdList[index]}.jpg'),
                   ),
-              );
-            } else {
-              return SizedBox();
-            }
-          },
+                )),
+              )
+          ),
         );
       }
     );
@@ -208,7 +198,7 @@ class _ContactPageState extends State<ContactPage> {
         });
   }
 
-  void onShowFriendRequestDialog(SpektrumUser user) {
+  void onShowFriendRequestDialog(ContactPageInfo contactPageInfo) {
     inputDecorationNewFriend = InputDecoration(
       hintText: 'e-mail adresse',
       errorText: null,
@@ -236,8 +226,8 @@ class _ContactPageState extends State<ContactPage> {
       }
 
       try {
-        await user.sendFriendRequest(_newUserName.text.toLowerCase());
-        setStateParent(() => user.pendingFriendRequestList.add(_newUserName.text.toLowerCase()));
+        await contactPageInfo.user.sendFriendRequest(_newUserName.text.toLowerCase());
+        setStateParent(() => contactPageInfo.pendingFriendRequestList.add(_newUserName.text.toLowerCase()));
         Navigator.of(context).pop();
       } on PostgreSQLException {
         setStateDialog(() {
@@ -294,50 +284,51 @@ class _ContactPageState extends State<ContactPage> {
         });
   }
 
-  void onFriendRequestAccepted(SpektrumUser user, String targetUserId) {
-    user.acceptFriendRequest(targetUserId);
+  void onFriendRequestAccepted(ContactPageInfo contactPageInfo, String targetUserId) {
+    contactPageInfo.user.acceptFriendRequest(targetUserId);
     setState(() {
-      user.friendRequestList.remove(targetUserId);
-      user.contactList.add(targetUserId);
-      user.contactList.sort();
+      contactPageInfo.friendRequestList.remove(targetUserId);
+      contactPageInfo.contactList.add(targetUserId);
+      contactPageInfo.contactList.sort();
     });
   }
 
-  Widget getFriendActionButton(SpektrumUser user, String targetUserId) {
-    if (user.friendRequestList.contains(targetUserId)) {
+  Widget getFriendActionButton(ContactPageInfo contactPageInfo, String targetUserId) {
+    if (contactPageInfo.friendRequestList.contains(targetUserId)) {
       return IconButton(
         icon: Icon(Icons.add),
-        onPressed: () => onFriendRequestAccepted(user, targetUserId),
+        onPressed: () => onFriendRequestAccepted(contactPageInfo, targetUserId),
       );
-    } else if (user.pendingFriendRequestList.contains(targetUserId)) {
+    } else if (contactPageInfo.pendingFriendRequestList.contains(targetUserId)) {
       return IconButton(
         icon: Icon(Icons.mail_outline),
         onPressed: null,
       );
-    } else if (user.challengeList.contains(targetUserId)) {
+    } else if (contactPageInfo.challengeList.contains(targetUserId)) {
       return IconButton(
         icon: Icon(Icons.check),
         onPressed: () async {
-          await user.acceptChallenge(targetUserId);
+          await contactPageInfo.user.acceptChallenge(targetUserId);
           await Navigator.push(
             context,
             MaterialPageRoute(
                 builder: (context) => GameRoomPage(
+                      user: contactPageInfo.user,
                       opponent: targetUserId,
                     )),
           );
           setState(() {
-            user.challengeList.remove(targetUserId);
-            user.openGameList.add(targetUserId);
+            contactPageInfo.challengeList.remove(targetUserId);
+            contactPageInfo.openGameList.add(targetUserId);
           });
         },
       );
-    } else if (user.challengeSentList.contains(targetUserId)) {
+    } else if (contactPageInfo.challengeSentList.contains(targetUserId)) {
       return IconButton(
         icon: Icon(Icons.autorenew),
         onPressed: null,
       );
-    } else if (user.openGameList.contains(targetUserId)) {
+    } else if (contactPageInfo.openGameList.contains(targetUserId)) {
       return IconButton(
         icon: Icon(Icons.arrow_forward),
         onPressed: () async {
@@ -345,6 +336,7 @@ class _ContactPageState extends State<ContactPage> {
             context,
             MaterialPageRoute(
                 builder: (context) => GameRoomPage(
+                      user: contactPageInfo.user,
                       opponent: targetUserId,
                     )),
           );
@@ -354,9 +346,9 @@ class _ContactPageState extends State<ContactPage> {
       return IconButton(
         icon: Icon(Icons.mail_outline),
         onPressed: () {
-          user.sendChallenge(targetUserId);
+          contactPageInfo.user.sendChallenge(targetUserId);
           setState(() {
-            user.challengeSentList.add(targetUserId);
+            contactPageInfo.challengeSentList.add(targetUserId);
           });
         },
       );
@@ -368,10 +360,10 @@ class _ContactPageState extends State<ContactPage> {
     return Scaffold(
       body: Center(
         child: FutureBuilder(
-          future: spektrumUser,
-          builder: (BuildContext context, AsyncSnapshot<SpektrumUser> snapshot) {
+          future: contactPageInfo,
+          builder: (BuildContext context, AsyncSnapshot<ContactPageInfo> snapshot) {
             if (snapshot.hasData) {
-              SpektrumUser user = snapshot.data;
+              ContactPageInfo contactPageInfo = snapshot.data;
               return PageView(
                 scrollDirection: Axis.horizontal,
                 children: [
@@ -391,13 +383,13 @@ class _ContactPageState extends State<ContactPage> {
                             children: [
                               PopupMenuButton<MenuOption>(
                                 offset: Offset(-MediaQuery.of(context).size.width / 5, MediaQuery.of(context).size.width / 6),
-                                icon: user.profileImageId == null ? Icon(Icons.person_pin) : ClipRRect(
+                                icon: contactPageInfo.user.profileImageId == null ? Icon(Icons.person_pin) : ClipRRect(
                                   borderRadius: BorderRadius.circular(200.0),
-                                  child: Image.asset('assets/portrait_id/${user.profileImageId}.jpg'),
+                                  child: Image.asset('assets/portrait_id/${contactPageInfo.user.profileImageId}.jpg'),
                                 ),
                                 iconSize: MediaQuery.of(context).size.width / 6,
                                 onSelected: (MenuOption selected) {
-                                  selected.action(context, this, user);
+                                  selected.action(context, this, contactPageInfo.user, contactPageInfo.speakerIdList);
                                 },
                                 itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuOption>>[
                                   PopupMenuItem(
@@ -407,9 +399,9 @@ class _ContactPageState extends State<ContactPage> {
                                       children: [
                                         IconButton(
                                           onPressed: null,
-                                          icon: user.profileImageId == null ? Icon(Icons.person_pin) : ClipRRect(
+                                          icon: contactPageInfo.user.profileImageId == null ? Icon(Icons.person_pin) : ClipRRect(
                                             borderRadius: BorderRadius.circular(200.0),
-                                            child: Image.asset('assets/portrait_id/${user.profileImageId}.jpg'),
+                                            child: Image.asset('assets/portrait_id/${contactPageInfo.user.profileImageId}.jpg'),
                                           ),
                                           iconSize: 40,
                                         ),
@@ -422,7 +414,7 @@ class _ContactPageState extends State<ContactPage> {
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(user.userName),
+                                        Text(contactPageInfo.user.userName),
                                         Icon(Icons.edit_rounded),
                                       ],
                                     ),
@@ -445,7 +437,7 @@ class _ContactPageState extends State<ContactPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                user.userName,
+                                contactPageInfo.user.userName,
                                 textScaleFactor: 1.2,
                               ),
                             ],
@@ -464,14 +456,14 @@ class _ContactPageState extends State<ContactPage> {
                           ),
                           Flexible(
                             child: ListView.builder(
-                                itemCount: user.openGameList.length,
+                                itemCount: contactPageInfo.openGameList.length,
                                 itemBuilder: (BuildContext context, int index) {
-                                  String targetUserId = user.openGameList[index];
+                                  String targetUserId = contactPageInfo.openGameList[index];
                                   return Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(targetUserId),
-                                      getFriendActionButton(user, targetUserId),
+                                      getFriendActionButton(contactPageInfo, targetUserId),
                                     ],
                                   );
                                 }),
@@ -499,21 +491,21 @@ class _ContactPageState extends State<ContactPage> {
                                 style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
                               ),
                               IconButton(
-                                onPressed: () => onShowFriendRequestDialog(user),
+                                onPressed: () => onShowFriendRequestDialog(contactPageInfo),
                                 icon: Icon(Icons.person_add_outlined),
                               ),
                             ],
                           ),
                           Expanded(
                             child: ListView.builder(
-                                itemCount: user.contactList.length,
+                                itemCount: contactPageInfo.contactList.length,
                                 itemBuilder: (BuildContext context, int index) {
-                                  String targetUserId = user.contactList[index];
+                                  String targetUserId = contactPageInfo.contactList[index];
                                   return Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(targetUserId),
-                                      getFriendActionButton(user, targetUserId),
+                                      getFriendActionButton(contactPageInfo, targetUserId),
                                     ],
                                   );
                                 }),
@@ -546,88 +538,5 @@ class _ContactPageState extends State<ContactPage> {
         ),
       ),
     );
-  }
-}
-
-class SpektrumUser {
-  String userId;
-  String userName;
-  List<String> contactList;
-  List<String> friendRequestList;
-  List<String> pendingFriendRequestList;
-  List<String> openGameList;
-  List<String> challengeList;
-  List<String> challengeSentList;
-  String profileImageId;
-
-  SpektrumUser(
-      {this.userId,
-      this.userName,
-      this.contactList,
-      this.friendRequestList,
-      this.pendingFriendRequestList,
-      this.challengeList,
-      this.challengeSentList,
-      this.openGameList,
-      this.profileImageId});
-
-  static Future<SpektrumUser> getUserById(String userId) async {
-    final Map<String, dynamic> json = await ApiConnection.get('/user/$userId');
-    return SpektrumUser(
-      userId: json['userId'],
-      userName: json['userName'],
-      profileImageId: json['profileImageId'],
-      contactList: List<String>.from(json['contactList']),
-      friendRequestList: List<String>.from(json['friendRequestList']),
-      pendingFriendRequestList: List<String>.from(json['pendingFriendRequestList']),
-      challengeList: List<String>.from(json['challengeList']),
-      challengeSentList: List<String>.from(json['challengeSentList']),
-      openGameList: List<String>.from(json['openGameList']),
-    );
-  }
-
-  static Future<String> fetchProfileImageId(String userId) async {
-    final Map<String, dynamic> json = await ApiConnection.get('/user/$userId/profileImageId');
-    return json['profileImageId'];
-  }
-
-  static Future<String> fetchUserName(String userId) async {
-    final Map<String, dynamic> json = await ApiConnection.get('/user/$userId/userName');
-    return json['userName'];
-  }
-
-  Future<void> createUser() async {
-    final Map<String, dynamic> body = { 'userId': userId, 'userName': userName };
-    await ApiConnection.post('/user/createUser', body);
-  }
-
-  Future<void> changeUserName(String newUserName) async {
-    final Map<String, dynamic> body = { 'userId': userId, 'newUserName': newUserName };
-    await ApiConnection.post('/user/changeUserName', body);
-  }
-
-  Future<void> changeProfileImageId(String newProfileImageId) async {
-    final Map<String, dynamic> body = { 'userId': userId, 'newProfileImageId': newProfileImageId };
-    await ApiConnection.post('/user/changeProfileImageId', body);
-  }
-
-  Future<void> sendFriendRequest(String targetUserId) async {
-    final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId };
-    await ApiConnection.post('/user/sendFriendRequest', body);
-  }
-
-  Future<void> acceptFriendRequest(String targetUserId) async {
-    final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId};
-    await ApiConnection.post('/user/acceptFriendRequest', body);
-  }
-
-  Future<void> sendChallenge(String targetUserId) async {
-    final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId };
-    await ApiConnection.post('/user/sendChallenge', body);
-  }
-
-  Future<void> acceptChallenge(String targetUserId) async {
-    final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId };
-    await ApiConnection.post('/user/acceptChallenge', body);
   }
 }
