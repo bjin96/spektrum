@@ -50,13 +50,16 @@ class ContactPage extends StatefulWidget {
 }
 
 class _ContactPageState extends State<ContactPage> {
-  _ContactPageState();
 
-  Future<ContactPageInfo> contactPageInfo = ContactPageInfo.getContactPageInfo(FirebaseAuth.instance.currentUser.email);
+  Future<ContactPageInfo> contactPageInfo;
 
   TextEditingController _newUserName = TextEditingController();
   InputDecoration inputDecorationNewFriend;
   InputDecoration inputDecorationChangeUserName;
+
+  _ContactPageState() {
+    this.contactPageInfo = ContactPageInfo.getContactPageInfo(FirebaseAuth.instance.currentUser.email);
+  }
 
   @override
   void initState() {
@@ -315,7 +318,9 @@ class _ContactPageState extends State<ContactPage> {
                 builder: (context) => GameRoomPage(
                       user: contactPageInfo.user,
                       opponent: targetUserId,
-                    )),
+                    ),
+              maintainState: false,
+            ),
           );
           setState(() {
             contactPageInfo.challengeList.remove(targetUserId);
@@ -338,7 +343,9 @@ class _ContactPageState extends State<ContactPage> {
                 builder: (context) => GameRoomPage(
                       user: contactPageInfo.user,
                       opponent: targetUserId,
-                    )),
+                    ),
+              maintainState: false
+            ),
           );
         },
       );

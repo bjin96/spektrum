@@ -36,7 +36,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
         ).createUser();
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ContactPage()),
+          MaterialPageRoute(builder: (context) => ContactPage(), maintainState: false),
         );
       } on FirebaseAuthException catch (e) {
         if (e.code == 'weak-password') {
@@ -59,7 +59,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ContactPage()),
+          MaterialPageRoute(builder: (context) => ContactPage(), maintainState: false),
         );
       } on FirebaseAuthException catch (e) {
         setState(() => _wrongCredentials = true);

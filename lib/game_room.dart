@@ -29,7 +29,9 @@ class _GameRoomPageState extends State<GameRoomPage> {
       MaterialPageRoute(
           builder: (context) => GamePage(
                 gameId: gameId
-              )),
+              ),
+        maintainState: false
+      ),
     );
   }
 
