@@ -296,12 +296,12 @@ class _ContactPageState extends State<ContactPage> {
   Widget getFriendActionButton(ContactPageInfo contactPageInfo, String targetUserId) {
     if (contactPageInfo.friendRequestList.contains(targetUserId)) {
       return IconButton(
-        icon: Icon(Icons.add),
+        icon: Icon(Icons.person_add_outlined),
         onPressed: () => onFriendRequestAccepted(contactPageInfo, targetUserId),
       );
     } else if (contactPageInfo.pendingFriendRequestList.contains(targetUserId)) {
       return IconButton(
-        icon: Icon(Icons.mail_outline),
+        icon: Icon(Icons.person_add_outlined),
         onPressed: null,
       );
     } else if (contactPageInfo.challengeList.contains(targetUserId)) {
@@ -325,7 +325,7 @@ class _ContactPageState extends State<ContactPage> {
       );
     } else if (contactPageInfo.challengeSentList.contains(targetUserId)) {
       return IconButton(
-        icon: Icon(Icons.autorenew),
+        icon: Icon(Icons.mail_outline),
         onPressed: null,
       );
     } else if (contactPageInfo.openGameList.contains(targetUserId)) {
