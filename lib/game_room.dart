@@ -1,11 +1,8 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:spektrum/game.dart';
-import 'package:spektrum/model/result.dart';
 
-import 'model/excerpt.dart';
 import 'model/spektrum_user.dart';
 import 'model/pageInfo.dart';
 
@@ -143,7 +140,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
                             width: 100.0,
                             child: Center(
                               child: Text(
-                                FirebaseAuth.instance.currentUser.email,
+                                preGamePageInfo.user.userId,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -153,19 +150,34 @@ class _GameRoomPageState extends State<GameRoomPage> {
                       ),
                       Column(
                         children: [
-                          IconButton(
+                          preGamePageInfo.opponent.profileImageId != null
+                              ? IconButton(
                             icon: ClipRRect(
                               borderRadius: BorderRadius.circular(200.0),
                               child: Image.asset('assets/portrait_id/${preGamePageInfo.opponent.profileImageId}.jpg'),
                             ),
                             iconSize: 50,
                             onPressed: null,
+                          )
+                              : Icon(
+                            Icons.person_pin,
+                            size: 65,
                           ),
-                          SizedBox(
+                          preGamePageInfo.opponent.userName != null
+                              ? SizedBox(
                             width: 100.0,
                             child: Center(
                               child: Text(
                                 preGamePageInfo.opponent.userName,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                              : SizedBox(
+                            width: 100.0,
+                            child: Center(
+                              child: Text(
+                                preGamePageInfo.opponent.userId,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
