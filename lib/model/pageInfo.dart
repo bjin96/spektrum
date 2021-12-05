@@ -26,7 +26,8 @@ class ContactPageInfo {
         this.speakerIdList});
 
   static Future<ContactPageInfo> getContactPageInfo(String userId) async {
-    final Map<String, dynamic> json = await ApiConnection.get('/view/contactPage/$userId');
+    final Map<String, dynamic> body = {'userId': userId};
+    final Map<String, dynamic> json = await ApiConnection.post('/view/contactPage', body);
     return ContactPageInfo(
       user: SpektrumUser.fromJson(json['user']),
       contactList: List<String>.from(json['contactList']),
@@ -55,7 +56,8 @@ class PreGamePageInfo {
         this.opponentGame});
 
   static Future<PreGamePageInfo> getPreGamePageInfo(SpektrumUser user, String opponentId) async {
-    final Map<String, dynamic> json = await ApiConnection.get('/view/preGamePage/${user.userId}/$opponentId');
+    final Map<String, dynamic> body = {'userId': user.userId, 'opponentId': opponentId};
+    final Map<String, dynamic> json = await ApiConnection.post('/view/preGamePage', body);
     return PreGamePageInfo(
       user: user,
       opponent: SpektrumUser.fromJson(json['opponent']),
@@ -74,7 +76,8 @@ class GamePageInfo {
       this.resultList});
 
   static Future<GamePageInfo> getGamePageInfo(int gameId) async {
-    final Map<String, dynamic> json = await ApiConnection.get('/view/gamePage/$gameId');
+    final Map<String, dynamic> body = {'gameId': gameId};
+    final Map<String, dynamic> json = await ApiConnection.post('/view/gamePage', body);
 
     final excerptList = List.generate(json['excerptList'].length, (i) {
       return Excerpt(
