@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
-import 'package:postgres/postgres.dart';
 
 import 'authentication.dart';
 import 'game_room.dart';
@@ -145,7 +144,7 @@ class _ContactPageState extends State<ContactPage> {
         await user.changeUserName(_newUserName.text);
         Navigator.of(context).pop();
         setStateParent(() => user.userName = _newUserName.text);
-      } on PostgreSQLException {
+      } catch (exception) {
         setStateDialog(() {
           inputDecorationChangeUserName = InputDecoration(
             hintText: 'neuer benutzername',
@@ -232,7 +231,7 @@ class _ContactPageState extends State<ContactPage> {
         await contactPageInfo.user.sendFriendRequest(_newUserName.text.toLowerCase());
         setStateParent(() => contactPageInfo.pendingFriendRequestList.add(_newUserName.text.toLowerCase()));
         Navigator.of(context).pop();
-      } on PostgreSQLException {
+      } catch (exception) {
         setStateDialog(() {
           inputDecorationNewFriend = InputDecoration(
             hintText: 'e-mail adresse',
