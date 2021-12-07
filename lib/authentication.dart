@@ -1,10 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:spektrum/contacts.dart';
 
 import 'model/spektrum_user.dart';
-
 
 class AuthenticationPage extends StatefulWidget {
   const AuthenticationPage({Key key}) : super(key: key);
@@ -21,14 +20,14 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
   TextEditingController _password = TextEditingController();
   bool _isRegisterMode = false;
   bool _wrongCredentials = false;
+  String _errorMessage = '';
+  bool _passwordVisible = false;
 
   void registerUser() async {
     if (_formKey.currentState.validate()) {
       try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: _mail.text.toLowerCase(),
-            password: _password.text
-        );
+        await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(email: _mail.text.toLowerCase(), password: _password.text);
         await SpektrumUser(
           userId: _mail.text.toLowerCase(),
           userName: _mail.text.toLowerCase(),
@@ -39,13 +38,25 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
           MaterialPageRoute(builder: (context) => ContactPage(), maintainState: false),
         );
       } on FirebaseAuthException catch (e) {
-        if (e.code == 'weak-password') {
-          print('The password provided is too weak.');
-        } else if (e.code == 'email-already-in-use') {
-          print('The account already exists for that email.');
-        }
+        setState(() {
+          _wrongCredentials = true;
+          switch (e.code) {
+            case ('email-already-in-use'):
+              _errorMessage = 'account mit dieser e-mail existiert bereits.';
+              break;
+            case ('invalid-email'):
+              _errorMessage = 'e-mail ist ungültig.';
+              break;
+            case ('weak-password'):
+              _errorMessage = 'passwort muss min. 6 zahlen und buchstaben enthalten.';
+              break;
+          }
+        });
       } catch (e) {
-        print(e);
+        setState(() {
+          _wrongCredentials = true;
+          _errorMessage = 'unvorhergesehener fehler. bitte app neustarten.';
+        });
       }
     }
   }
@@ -62,14 +73,133 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
           MaterialPageRoute(builder: (context) => ContactPage(), maintainState: false),
         );
       } on FirebaseAuthException catch (e) {
-        setState(() => _wrongCredentials = true);
-        if (e.code == 'user-not-found') {
-          print('No user found for that email.');
-        } else if (e.code == 'wrong-password') {
-          print('Wrong password provided for that user.');
-        }
+        setState(() {
+          _wrongCredentials = true;
+          switch (e.code) {
+            case ('invalid-email'):
+              _errorMessage = 'e-mail adresse ist nicht gültig.';
+              break;
+            case ('user-disabled'):
+              _errorMessage = 'benutzer ist deaktiviert.';
+              break;
+            case ('user-not-found'):
+              _errorMessage = 'benutzer existiert nicht.';
+              break;
+            case ('wrong-password'):
+              _errorMessage = 'password ist falsch.';
+              break;
+          }
+        });
+      } catch (e) {
+        setState(() {
+          _wrongCredentials = true;
+          _errorMessage = 'unvorhergesehener fehler. bitte app neustarten.';
+        });
       }
     }
+  }
+
+  void resetPassword(String email) {
+    TextEditingController resetEmail = TextEditingController(text: email);
+    InputDecoration inputDecorationEmail = InputDecoration(
+      hintText: 'e-mail adresse',
+      errorText: null,
+    );
+
+    void _resetPassword(StateSetter setStateDialog) async {
+      if (resetEmail.text == null || resetEmail.text.isEmpty) {
+        setStateDialog(() {
+          inputDecorationEmail = InputDecoration(
+            hintText: 'e-mail adresse',
+            errorText: 'bitte gib eine e-mail adresse ein.',
+          );
+        });
+        return;
+      }
+      if (!resetEmail.text.contains('@')) {
+        setStateDialog(() {
+          inputDecorationEmail = InputDecoration(
+            hintText: 'e-mail adresse',
+            errorText: 'e-mail ist ungültig.',
+          );
+        });
+        return;
+      }
+
+      try {
+        await FirebaseAuth.instance.sendPasswordResetEmail(email: resetEmail.text);
+        Navigator.of(context).pop();
+      } on FirebaseAuthException catch (e) {
+        switch (e.code) {
+          case ('invalid-email'):
+            setStateDialog(() {
+              inputDecorationEmail = InputDecoration(
+                hintText: 'e-mail adresse',
+                errorText: 'e-mail ist ungültig.',
+              );
+            });
+            break;
+          case ('user-not-found'):
+            setStateDialog(() {
+              inputDecorationEmail = InputDecoration(
+                hintText: 'e-mail adresse',
+                errorText: 'e-mail wurde nicht gefunden.',
+              );
+            });
+        }
+      } catch (e) {
+        setStateDialog(() {
+          inputDecorationEmail = InputDecoration(
+            hintText: 'e-mail adresse',
+            errorText: 'unvorhergesehener fehler. bitte erneut versuchen.',
+          );
+        });
+      }
+    }
+
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('passwort zurücksetzen'),
+            content: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setStateDialog) {
+                return Container(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        keyboardType: TextInputType.emailAddress,
+                        obscureText: false,
+                        decoration: inputDecorationEmail,
+                        controller: resetEmail,
+                        textInputAction: TextInputAction.done,
+                        onEditingComplete: () => _resetPassword(setStateDialog),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(10),
+                            child: ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: Text('abbrechen', textScaleFactor: 0.9)),
+                          ),
+                          Container(
+                            padding: EdgeInsets.all(10),
+                            child: ElevatedButton(
+                                onPressed: () => _resetPassword(setStateDialog),
+                                child: Text('bestätigen', textScaleFactor: 0.9)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          );
+        });
   }
 
   @override
@@ -122,17 +252,24 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                   Container(
                     padding: EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 10),
                     child: TextFormField(
-                      obscureText: true,
+                      obscureText: !_passwordVisible,
                       style: TextStyle(),
                       decoration: InputDecoration(
                         hintText: 'passwort',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _passwordVisible ? Icons.visibility : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _passwordVisible = !_passwordVisible;
+                            });
+                          },
+                        ),
                       ),
                       validator: (String value) {
                         if (value == null || value.isEmpty) {
                           return 'bitte gib dein passwort ein.';
-                        }
-                        if (value.length < 8) {
-                          return 'passwort muss mindesten 8 zeichen enthalten.';
                         }
                         return null;
                       },
@@ -163,54 +300,66 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                     ),
                   ),
                   Visibility(
-                      visible: _wrongCredentials,
-                      child: Container(
-                        alignment: Alignment.centerLeft,
-                        padding: EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 10),
-                        child: Text(
-                          'benutzername oder password falsch.',
-                          style: TextStyle(color: Colors.red[700], fontSize: 12),
-                        ),
+                    visible: _wrongCredentials,
+                    child: Container(
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 10),
+                      child: Text(
+                        _errorMessage,
+                        style: TextStyle(color: Colors.red[700], fontSize: 12),
                       ),
+                    ),
                   ),
                   Visibility(
                     visible: !_isRegisterMode,
                     child: Container(
-                      padding: EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      padding: EdgeInsets.only(top: 10, left: 33, right: 40, bottom: 10),
+                      child: Column(
                         children: [
-                          TextButton(
-                            child: Text('noch keinen account?', style: TextStyle(fontSize: 12)),
-                            onPressed: () => setState(() => _isRegisterMode = true),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              TextButton(
+                                child: Text('noch keinen account?', style: TextStyle(fontSize: 12)),
+                                onPressed: () => setState(() => _isRegisterMode = true),
+                              ),
+                              ElevatedButton(
+
+                                child: Text('anmelden', style: TextStyle(fontSize: 12)),
+                                onPressed: () => {signIn(setState)},
+                              ),
+                            ],
                           ),
-                          ElevatedButton(
-                            child: Text('anmelden', style: TextStyle(fontSize: 12)),
-                            onPressed: () => {signIn(setState)},
+                          Row(
+                            children: [
+                              TextButton(
+                                child: Text('password vergessen?', style: TextStyle(fontSize: 12)),
+                                onPressed: () => resetPassword(_mail.text),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
                   ),
                   Visibility(
-                    visible: _isRegisterMode,
-                    child: Container(
-                      padding: EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          TextButton(
-                            child: Text('bereits einen account?', style: TextStyle(fontSize: 12)),
-                            onPressed: () => setState(() => _isRegisterMode = false),
-                          ),
-                          ElevatedButton(
-                            child: Text('registrieren', style: TextStyle(fontSize: 12)),
-                            onPressed: () => {registerUser()},
-                          ),
-                        ],
-                      ),
-                    )
-                  ),
+                      visible: _isRegisterMode,
+                      child: Container(
+                        padding: EdgeInsets.only(top: 10, left: 33, right: 40, bottom: 10),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            TextButton(
+                              child: Text('bereits einen account?', style: TextStyle(fontSize: 12)),
+                              onPressed: () => setState(() => _isRegisterMode = false),
+                            ),
+                            ElevatedButton(
+                              child: Text('registrieren', style: TextStyle(fontSize: 12)),
+                              onPressed: () => {registerUser()},
+                            ),
+                          ],
+                        ),
+                      )),
                 ],
               ),
             ],
