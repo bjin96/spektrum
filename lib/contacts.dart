@@ -286,20 +286,57 @@ class _ContactPageState extends State<ContactPage> {
         });
   }
 
-  void onFriendRequestAccepted(ContactPageInfo contactPageInfo, String targetUserId) {
-    contactPageInfo.user.acceptFriendRequest(targetUserId);
-    setState(() {
-      contactPageInfo.friendRequestList.remove(targetUserId);
-      contactPageInfo.contactList.add(targetUserId);
-      contactPageInfo.contactList.sort();
-    });
-  }
-
   Widget getFriendActionButton(ContactPageInfo contactPageInfo, String targetUserId) {
+    void _onFriendRequestAccepted(ContactPageInfo contactPageInfo, String targetUserId) {
+      contactPageInfo.user.acceptFriendRequest(targetUserId);
+      setState(() {
+        contactPageInfo.friendRequestList.remove(targetUserId);
+        contactPageInfo.contactList.sort();
+      });
+    }
+
+    Future<void> _onAcceptChallenge(ContactPageInfo contactPageInfo, String targetUserId) async {
+      await contactPageInfo.user.acceptChallenge(targetUserId);
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => GameRoomPage(
+            user: contactPageInfo.user,
+            opponent: targetUserId,
+          ),
+          maintainState: false,
+        ),
+      );
+      setState(() {
+        contactPageInfo.challengeList.remove(targetUserId);
+        contactPageInfo.openGameList.add(targetUserId);
+      });
+    }
+
+    void _onSendChallenge(ContactPageInfo contactPageInfo, String targetUserId) {
+      contactPageInfo.user.sendChallenge(targetUserId);
+      setState(() {
+        contactPageInfo.challengeSentList.add(targetUserId);
+      });
+    }
+
+    Future<void> _onOpenGame(ContactPageInfo contactPageInfo, String targetUserId) async {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => GameRoomPage(
+              user: contactPageInfo.user,
+              opponent: targetUserId,
+            ),
+            maintainState: false
+        ),
+      );
+    }
+
     if (contactPageInfo.friendRequestList.contains(targetUserId)) {
       return IconButton(
         icon: Icon(Icons.person_add_outlined),
-        onPressed: () => onFriendRequestAccepted(contactPageInfo, targetUserId),
+        onPressed: () => _onFriendRequestAccepted(contactPageInfo, targetUserId),
       );
     } else if (contactPageInfo.pendingFriendRequestList.contains(targetUserId)) {
       return IconButton(
@@ -309,23 +346,7 @@ class _ContactPageState extends State<ContactPage> {
     } else if (contactPageInfo.challengeList.contains(targetUserId)) {
       return IconButton(
         icon: Icon(Icons.check),
-        onPressed: () async {
-          await contactPageInfo.user.acceptChallenge(targetUserId);
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => GameRoomPage(
-                      user: contactPageInfo.user,
-                      opponent: targetUserId,
-                    ),
-              maintainState: false,
-            ),
-          );
-          setState(() {
-            contactPageInfo.challengeList.remove(targetUserId);
-            contactPageInfo.openGameList.add(targetUserId);
-          });
-        },
+        onPressed: () => _onAcceptChallenge(contactPageInfo, targetUserId),
       );
     } else if (contactPageInfo.challengeSentList.contains(targetUserId)) {
       return IconButton(
@@ -335,28 +356,12 @@ class _ContactPageState extends State<ContactPage> {
     } else if (contactPageInfo.openGameList.contains(targetUserId)) {
       return IconButton(
         icon: Icon(Icons.arrow_forward),
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => GameRoomPage(
-                      user: contactPageInfo.user,
-                      opponent: targetUserId,
-                    ),
-              maintainState: false
-            ),
-          );
-        },
+        onPressed: () => _onOpenGame(contactPageInfo, targetUserId),
       );
     } else {
       return IconButton(
         icon: Icon(Icons.mail_outline),
-        onPressed: () {
-          contactPageInfo.user.sendChallenge(targetUserId);
-          setState(() {
-            contactPageInfo.challengeSentList.add(targetUserId);
-          });
-        },
+        onPressed: () => _onSendChallenge(contactPageInfo, targetUserId),
       );
     }
   }
