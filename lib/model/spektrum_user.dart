@@ -1,6 +1,9 @@
-import '../api_connection.dart';
+import '../socket_connection.dart';
 
 class SpektrumUser {
+
+  static const String SOCKET_NAMESPACE = 'user_';
+
   String userId;
   String userName;
   String profileImageId;
@@ -20,36 +23,36 @@ class SpektrumUser {
 
   Future<void> changeUserName(String newUserName) async {
     final Map<String, dynamic> body = { 'userId': userId, 'newUserName': newUserName };
-    await ApiConnection.post('/user/changeUserName', body);
+    await SocketConnection.send(SOCKET_NAMESPACE + 'change_user_name', body);
   }
 
   Future<void> changeProfileImageId(String newProfileImageId) async {
     final Map<String, dynamic> body = { 'userId': userId, 'newProfileImageId': newProfileImageId };
-    await ApiConnection.post('/user/changeProfileImageId', body);
+    await SocketConnection.send(SOCKET_NAMESPACE + 'change_profile_image_id', body);
   }
 
   Future<void> createUser() async {
     final Map<String, dynamic> body = { 'userId': userId, 'userName': userName };
-    await ApiConnection.post('/user/createUser', body);
+    await SocketConnection.send(SOCKET_NAMESPACE + 'create_user', body);
   }
 
   Future<void> sendFriendRequest(String targetUserId) async {
     final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId };
-    await ApiConnection.post('/user/sendFriendRequest', body);
+    await SocketConnection.send(SOCKET_NAMESPACE + 'send_friend_request', body);
   }
 
   Future<void> acceptFriendRequest(String targetUserId) async {
     final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId};
-    await ApiConnection.post('/user/acceptFriendRequest', body);
+    await SocketConnection.send(SOCKET_NAMESPACE + 'accept_friend_request', body);
   }
 
   Future<void> sendChallenge(String targetUserId) async {
     final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId };
-    await ApiConnection.post('/user/sendChallenge', body);
+    await SocketConnection.send(SOCKET_NAMESPACE + 'send_challenge', body);
   }
 
   Future<void> acceptChallenge(String targetUserId) async {
     final Map<String, dynamic> body = { 'userId': userId, 'targetUserId': targetUserId };
-    await ApiConnection.post('/user/acceptChallenge', body);
+    await SocketConnection.send(SOCKET_NAMESPACE + 'accept_challenge', body);
   }
 }

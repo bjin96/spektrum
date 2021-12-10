@@ -1,6 +1,9 @@
-import '../api_connection.dart';
+import '../socket_connection.dart';
 
 class Result {
+
+  static const String SOCKET_NAMESPACE = 'result_';
+
   int gameId;
   int excerptCounter;
   String userId;
@@ -25,6 +28,6 @@ class Result {
       'socioEconomicCoordinate': socioEconomicCoordinate,
       'distance': distance,
     };
-    await ApiConnection.post('/result/store', body);
+    await SocketConnection.send(SOCKET_NAMESPACE + 'store', body);
   }
 }

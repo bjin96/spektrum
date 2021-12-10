@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:spektrum/model/spektrum_user.dart';
 
-import '../api_connection.dart';
+import '../socket_connection.dart';
 import 'excerpt.dart';
 import 'result.dart';
 import 'game.dart';
 
 class ContactPageInfo {
+
+  static const String SOCKET_NAMESPACE = 'view_';
+
   SpektrumUser user;
   List<String> contactList;
   List<String> friendRequestList;
@@ -27,7 +32,7 @@ class ContactPageInfo {
 
   static Future<ContactPageInfo> getContactPageInfo(String userId) async {
     final Map<String, dynamic> body = {'userId': userId};
-    final Map<String, dynamic> json = await ApiConnection.post('/view/contactPage', body);
+    Map<String, dynamic> json = await SocketConnection.send(SOCKET_NAMESPACE + 'contact_page', body);
     return ContactPageInfo(
       user: SpektrumUser.fromJson(json['user']),
       contactList: List<String>.from(json['contactList']),
@@ -43,6 +48,9 @@ class ContactPageInfo {
 
 
 class PreGamePageInfo {
+
+  static const String SOCKET_NAMESPACE = 'view_';
+
   SpektrumUser user;
   SpektrumUser opponent;
 
@@ -56,8 +64,8 @@ class PreGamePageInfo {
         this.opponentGame});
 
   static Future<PreGamePageInfo> getPreGamePageInfo(SpektrumUser user, String opponentId) async {
-    final Map<String, dynamic> body = {'userId': user.userId, 'opponentId': opponentId};
-    final Map<String, dynamic> json = await ApiConnection.post('/view/preGamePage', body);
+    final Map<String, dynamic> body = {'opponentId': opponentId};
+    Map<String, dynamic> json = await SocketConnection.send(SOCKET_NAMESPACE + 'pre_game_page', body);
     return PreGamePageInfo(
       user: user,
       opponent: SpektrumUser.fromJson(json['opponent']),
@@ -68,6 +76,9 @@ class PreGamePageInfo {
 }
 
 class GamePageInfo {
+
+  static const String SOCKET_NAMESPACE = 'view_';
+
   List<Excerpt> excerptList;
   List<Result> resultList;
 
@@ -77,8 +88,7 @@ class GamePageInfo {
 
   static Future<GamePageInfo> getGamePageInfo(int gameId) async {
     final Map<String, dynamic> body = {'gameId': gameId};
-    final Map<String, dynamic> json = await ApiConnection.post('/view/gamePage', body);
-
+    Map<String, dynamic> json = await SocketConnection.send(SOCKET_NAMESPACE + 'game_page', body);
     final excerptList = List.generate(json['excerptList'].length, (i) {
       return Excerpt(
           speakerFirstName: json['excerptList'][i]['speakerFirstName'],

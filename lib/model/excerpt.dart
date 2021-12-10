@@ -1,6 +1,9 @@
-import '../api_connection.dart';
+import '../socket_connection.dart';
 
 class Excerpt {
+
+  static const String SOCKET_NAMESPACE = 'excerpt_';
+
   String speakerFirstName;
   String speakerLastName;
   String party;
@@ -30,6 +33,6 @@ class Excerpt {
 
   void report() async {
     final Map<String, dynamic> body = {'speechId': speechId, 'fragment': fragment};
-    await ApiConnection.post('/excerpt/report', body);
+    await SocketConnection.send(SOCKET_NAMESPACE + 'report', body);
   }
 }

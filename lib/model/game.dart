@@ -1,6 +1,9 @@
-import '../api_connection.dart';
+import '../socket_connection.dart';
 
 class Game {
+
+  static const String SOCKET_NAMESPACE = 'game_';
+
   int gameId;
   double totalDistance;
   bool isFinished;
@@ -20,6 +23,6 @@ class Game {
 
   static void setFinished(gameId) async {
     final Map<String, dynamic> body = {'gameId': gameId};
-    await ApiConnection.post('/game/setGameFinished', body);
+    await SocketConnection.send(SOCKET_NAMESPACE + 'set_game_finished', body);
   }
 }
