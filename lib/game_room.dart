@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:spektrum/game.dart';
+import 'package:spektrum/socket_connection.dart';
 
+import 'model/game.dart';
 import 'model/spektrum_user.dart';
-import 'model/pageInfo.dart';
 
 class GameRoomPage extends StatefulWidget {
   GameRoomPage({Key key, this.user, this.opponent}) : super(key: key);
@@ -13,14 +14,74 @@ class GameRoomPage extends StatefulWidget {
   final String opponent;
 
   @override
-  _GameRoomPageState createState() => _GameRoomPageState(user, opponent);
+  _GameRoomPageState createState() => _GameRoomPageState(user: user, opponentId: opponent);
 }
 
 class _GameRoomPageState extends State<GameRoomPage> {
-  Future<PreGamePageInfo> preGamePageInfo;
 
-  _GameRoomPageState(SpektrumUser user, String opponent) {
-    this.preGamePageInfo = PreGamePageInfo.getPreGamePageInfo(user, opponent);
+  Future dataLoaded;
+
+  SpektrumUser user;
+  String opponentId;
+  SpektrumUser opponent;
+  Game userGame;
+  Game opponentGame;
+
+
+  _GameRoomPageState({this.user, this.opponentId});
+
+  @override
+  void initState() {
+    super.initState();
+
+    this.dataLoaded = setPreGameData();
+
+    SocketConnection.registerEventHandler('result_stored', handleResultStored);
+    SocketConnection.registerEventHandler('both_finished_game', handleBothFinishedGame);
+    SocketConnection.registerEventHandler('own_result_stored', handleOwnResultStored);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+
+    SocketConnection.clearHandler('result_stored', handleResultStored);
+    SocketConnection.clearHandler('both_finished_game', handleBothFinishedGame);
+    SocketConnection.clearHandler('own_result_stored', handleOwnResultStored);
+  }
+
+  Future setPreGameData() async {
+    final Map<String, dynamic> body = {'opponentId': this.opponentId};
+    Map<String, dynamic> json = await SocketConnection.send('view_pre_game_page', body);
+
+    this.opponent = SpektrumUser.fromJson(json['opponent']);
+    this.userGame = Game.fromJson(json['userGame']);
+    this.opponentGame = Game.fromJson(json['opponentGame']);
+  }
+
+  void handleResultStored(dynamic json)  {
+    if (this.opponent.userId == json['userId']) {
+      this.setState(() {
+        this.opponentGame.totalDistance += json['distance'];
+      });
+    }
+  }
+
+  void handleOwnResultStored(dynamic json)  {
+    if (this.opponent.userId == json['targetUserId']) {
+      this.setState(() {
+        this.userGame.totalDistance += json['distance'];
+      });
+    }
+  }
+
+  void handleBothFinishedGame(dynamic json) {
+    if (this.opponent.userId == json['userId']) {
+      this.setState(() {
+        this.userGame.isFinished = true;
+        this.opponentGame.isFinished = true;
+      });
+    }
   }
 
   void onStartGame(int gameId) {
@@ -30,7 +91,6 @@ class _GameRoomPageState extends State<GameRoomPage> {
           builder: (context) => GamePage(
                 gameId: gameId
               ),
-        maintainState: false
       ),
     );
   }
@@ -77,8 +137,8 @@ class _GameRoomPageState extends State<GameRoomPage> {
     );
   }
 
-  ElevatedButton getGameRoomActionButton(bool isUserGameFinished, bool isOpponentGameFinished, SpektrumUser user, String opponentId, int gameId) {
-    if (isUserGameFinished && isOpponentGameFinished) {
+  ElevatedButton getGameRoomActionButton() {
+    if (userGame.isFinished && opponentGame.isFinished) {
       return ElevatedButton(
           onPressed: () {
             user.sendChallenge(opponentId);
@@ -87,7 +147,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
           child: Text('erneut herausfordern'));
     } else {
       return ElevatedButton(
-          onPressed: () => onStartGame(gameId), child: Text('spielen'));
+          onPressed: () => onStartGame(userGame.gameId), child: Text('spielen'));
     }
   }
 
@@ -100,11 +160,9 @@ class _GameRoomPageState extends State<GameRoomPage> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.miniStartTop,
       body: FutureBuilder(
-        future: preGamePageInfo,
+        future: dataLoaded,
         builder: (BuildContext context, AsyncSnapshot snapshot) {
-          if (snapshot.hasData) {
-            PreGamePageInfo preGamePageInfo = snapshot.data;
-
+          if (snapshot.connectionState == ConnectionState.done) {
             return Column(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -115,11 +173,11 @@ class _GameRoomPageState extends State<GameRoomPage> {
                     children: [
                       Column(
                         children: [
-                          preGamePageInfo.user.profileImageId != null
+                          user.profileImageId != null
                               ? IconButton(
                             icon: ClipRRect(
                               borderRadius: BorderRadius.circular(200.0),
-                              child: Image.asset('assets/portrait_id/${preGamePageInfo.user.profileImageId}.jpg'),
+                              child: Image.asset('assets/portrait_id/${user.profileImageId}.jpg'),
                             ),
                             iconSize: 50,
                             onPressed: null,
@@ -128,12 +186,12 @@ class _GameRoomPageState extends State<GameRoomPage> {
                             Icons.person_pin,
                             size: 65,
                           ),
-                          preGamePageInfo.user.userName != null
+                          user.userName != null
                               ? SizedBox(
                             width: 100.0,
                             child: Center(
                               child: Text(
-                                preGamePageInfo.user.userName,
+                                user.userName,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -142,21 +200,21 @@ class _GameRoomPageState extends State<GameRoomPage> {
                             width: 100.0,
                             child: Center(
                               child: Text(
-                                preGamePageInfo.user.userId,
+                                user.userId,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
-                          getDistanceIndicator(preGamePageInfo.user.userId, preGamePageInfo.userGame.totalDistance),
+                          getDistanceIndicator(user.userId, userGame.totalDistance),
                         ],
                       ),
                       Column(
                         children: [
-                          preGamePageInfo.opponent.profileImageId != null
+                          opponent.profileImageId != null
                               ? IconButton(
                             icon: ClipRRect(
                               borderRadius: BorderRadius.circular(200.0),
-                              child: Image.asset('assets/portrait_id/${preGamePageInfo.opponent.profileImageId}.jpg'),
+                              child: Image.asset('assets/portrait_id/${opponent.profileImageId}.jpg'),
                             ),
                             iconSize: 50,
                             onPressed: null,
@@ -165,12 +223,12 @@ class _GameRoomPageState extends State<GameRoomPage> {
                             Icons.person_pin,
                             size: 65,
                           ),
-                          preGamePageInfo.opponent.userName != null
+                          opponent.userName != null
                               ? SizedBox(
                             width: 100.0,
                             child: Center(
                               child: Text(
-                                preGamePageInfo.opponent.userName,
+                                opponent.userName,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -179,12 +237,12 @@ class _GameRoomPageState extends State<GameRoomPage> {
                             width: 100.0,
                             child: Center(
                               child: Text(
-                                preGamePageInfo.opponent.userId,
+                                opponent.userId,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
-                          getDistanceIndicator(preGamePageInfo.opponent.userId, preGamePageInfo.opponentGame.totalDistance),
+                          getDistanceIndicator(opponent.userId, opponentGame.totalDistance),
                         ],
                       ),
                     ],
@@ -193,13 +251,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    getGameRoomActionButton(
-                      preGamePageInfo.userGame.isFinished,
-                      preGamePageInfo.opponentGame.isFinished,
-                      preGamePageInfo.user,
-                      preGamePageInfo.opponent.userId,
-                      preGamePageInfo.userGame.gameId
-                    ),
+                    getGameRoomActionButton(),
                   ],
                 ),
               ],

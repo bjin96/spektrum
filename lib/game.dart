@@ -4,10 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:spektrum/model/result.dart';
+import 'package:spektrum/socket_connection.dart';
 
 import 'model/excerpt.dart';
 import 'model/game.dart';
-import 'model/pageInfo.dart';
 
 const Map<String, Color> PARTY_COLOR = {
   'SPD': Color(0xffe2010f),
@@ -28,14 +28,55 @@ class GamePage extends StatefulWidget {
 }
 
 class _GamePage extends State<GamePage> {
+
+  Future dataLoaded;
+
   int gameId;
+  List<Excerpt> excerptList;
+  List<Result> resultList;
 
   PageController _pageController = PageController();
-  Future<GamePageInfo> gamePageInfoFuture;
 
   _GamePage(int gameId) {
     this.gameId = gameId;
-    this.gamePageInfoFuture = GamePageInfo.getGamePageInfo(gameId);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    this.dataLoaded = setGameData();
+  }
+
+  Future setGameData() async {
+    final Map<String, dynamic> body = {'gameId': gameId};
+    Map<String, dynamic> json = await SocketConnection.send('view_game_page', body);
+    this.excerptList = List.generate(json['excerptList'].length, (i) {
+      return Excerpt(
+          speakerFirstName: json['excerptList'][i]['speakerFirstName'],
+          speakerLastName: json['excerptList'][i]['speakerLastName'],
+          party: json['excerptList'][i]['party'],
+          socioCulturalCoordinate: json['excerptList'][i]['socioCulturalCoordinate'],
+          socioEconomicCoordinate: json['excerptList'][i]['socioEconomicCoordinate'],
+          content: json['excerptList'][i]['content'],
+          speechId: json['excerptList'][i]['speechid'],
+          fragment: json['excerptList'][i]['fragment'],
+          counter: json['excerptList'][i]['counter'],
+          topic: json['excerptList'][i]['topic'],
+          bio: json['excerptList'][i]['bio'],
+          speakerId: json['excerptList'][i]['speakerId']);
+    });
+
+    this.resultList = List.generate(json['resultList'].length, (i) {
+      return Result(
+        gameId: json['resultList'][i]['gameId'],
+        excerptCounter: json['resultList'][i]['excerptCounter'],
+        userId: json['resultList'][i]['userId'],
+        socioCulturalCoordinate: json['resultList'][i]['socioCulturalCoordinate'],
+        socioEconomicCoordinate: json['resultList'][i]['socioEconomicCoordinate'],
+        distance: json['resultList'][i]['distance'],
+      );
+    });
   }
 
   @override
@@ -49,10 +90,9 @@ class _GamePage extends State<GamePage> {
     final PageController controller = PageController(initialPage: 0);
 
     return FutureBuilder(
-        future: this.gamePageInfoFuture,
-        builder: (BuildContext context, AsyncSnapshot<GamePageInfo> snapshot) {
-          GamePageInfo gamePageInfo = snapshot.data;
-          if (snapshot.hasData) {
+        future: this.dataLoaded,
+        builder: (BuildContext context, AsyncSnapshot snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
             return PageView(
               scrollDirection: Axis.horizontal,
               reverse: false,
@@ -61,8 +101,8 @@ class _GamePage extends State<GamePage> {
               children: <Widget>[
                 Center(
                   child: MyHomePage(
-                    excerpt: gamePageInfo.excerptList[0],
-                    result: gamePageInfo.resultList.length > 0 ? gamePageInfo.resultList[0] : null,
+                    excerpt: excerptList[0],
+                    result: resultList.length > 0 ? resultList[0] : null,
                     gameId: this.gameId,
                     pageController: controller,
                     pageNumber: 1,
@@ -70,8 +110,8 @@ class _GamePage extends State<GamePage> {
                 ),
                 Center(
                   child: MyHomePage(
-                    excerpt: gamePageInfo.excerptList[1],
-                    result: gamePageInfo.resultList.length > 1 ? gamePageInfo.resultList[1] : null,
+                    excerpt: excerptList[1],
+                    result: resultList.length > 1 ? resultList[1] : null,
                     gameId: this.gameId,
                     pageController: controller,
                     pageNumber: 2,
@@ -79,8 +119,8 @@ class _GamePage extends State<GamePage> {
                 ),
                 Center(
                   child: MyHomePage(
-                    excerpt: gamePageInfo.excerptList[2],
-                    result: gamePageInfo.resultList.length > 2 ? gamePageInfo.resultList[2] : null,
+                    excerpt: excerptList[2],
+                    result: resultList.length > 2 ? resultList[2] : null,
                     gameId: this.gameId,
                     pageController: controller,
                     pageNumber: 3,

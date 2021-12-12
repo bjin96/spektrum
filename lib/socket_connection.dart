@@ -19,14 +19,9 @@ class SocketConnection {
       _instance = io('$apiHost:$apiPort',
           OptionBuilder()
               .setTransports(['websocket'])
-              .disableAutoConnect()
               .setAuth({'auth': {'token': idToken}})
               .build()
       );
-      Completer completer = new Completer();
-      _instance.onConnect((data) => completer.complete(data));
-      _instance.connect();
-      await completer.future;
     }
     return _instance;
   }
@@ -39,5 +34,20 @@ class SocketConnection {
       completer.complete(response);
     });
     return completer.future;
+  }
+
+  static void registerEventHandler(String event, Function eventHandler) async {
+    Socket socket = await SocketConnection.instance();
+    socket.on(event, eventHandler);
+  }
+
+  static void clearAllHandlers() async {
+    Socket socket = await SocketConnection.instance();
+    socket.clearListeners();
+  }
+
+  static void clearHandler(String event, Function handler) async {
+    Socket socket = await SocketConnection.instance();
+    socket.off(event, handler);
   }
 }

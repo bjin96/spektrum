@@ -35,7 +35,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
         ).createUser();
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ContactPage(), maintainState: false),
+          MaterialPageRoute(builder: (context) => ContactPage()),
         );
       } on FirebaseAuthException catch (e) {
         setState(() {
@@ -70,7 +70,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ContactPage(), maintainState: false),
+          MaterialPageRoute(builder: (context) => ContactPage()),
         );
       } on FirebaseAuthException catch (e) {
         setState(() {
