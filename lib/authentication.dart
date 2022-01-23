@@ -1,7 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:spektrum/contacts.dart';
+import 'package:spektrum/socket_connection.dart';
 
 import 'model/spektrum_user.dart';
 
@@ -23,16 +24,24 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
   String _errorMessage = '';
   bool _passwordVisible = false;
 
+  void registerNotifications(String userId) async {
+    String token = await FirebaseMessaging.instance.getToken();
+    final Map<String, dynamic> body = {'notificationToken': token, 'userId': userId};
+    SocketConnection.send('register_notification_token', body);
+  }
+
   void registerUser() async {
     if (_formKey.currentState.validate()) {
       try {
+        String userId = _mail.text.toLowerCase();
         await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(email: _mail.text.toLowerCase(), password: _password.text);
+            .createUserWithEmailAndPassword(email: userId, password: _password.text);
         await SpektrumUser(
-          userId: _mail.text.toLowerCase(),
-          userName: _mail.text.toLowerCase(),
+          userId: userId,
+          userName: userId,
           profileImageId: '11003638',
         ).createUser();
+        registerNotifications(userId);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => ContactPage()),
@@ -64,10 +73,12 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
   void signIn(StateSetter setState) async {
     if (_formKey.currentState.validate()) {
       try {
+        String userId = _mail.text.toLowerCase();
         await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _mail.text.toLowerCase(),
+          email: userId,
           password: _password.text,
         );
+        registerNotifications(userId);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => ContactPage()),
