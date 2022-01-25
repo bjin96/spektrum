@@ -53,6 +53,7 @@ class _ContactPageState extends State<ContactPage> {
   List<String> friendRequestList;
   List<String> pendingFriendRequestList;
   List<String> openGameList;
+  List<Map<String, dynamic>> finishedGameList;
   List<String> challengeList;
   List<String> challengeSentList;
   List<String> speakerIdList;
@@ -62,6 +63,8 @@ class _ContactPageState extends State<ContactPage> {
   TextEditingController _newUserName = TextEditingController();
   InputDecoration inputDecorationNewFriend;
   InputDecoration inputDecorationChangeUserName;
+
+  PageController _pageController = PageController(initialPage: 1);
 
   _ContactPageState();
 
@@ -97,6 +100,7 @@ class _ContactPageState extends State<ContactPage> {
     this.challengeList = List<String>.from(json['challengeList']);
     this.challengeSentList = List<String>.from(json['challengeSentList']);
     this.openGameList = List<String>.from(json['openGameList']);
+    this.finishedGameList = List<Map<String, dynamic>>.from(json['finishedGameList']);
     this.speakerIdList = List<String>.from(json['speakerIdList']);
   }
 
@@ -433,7 +437,60 @@ class _ContactPageState extends State<ContactPage> {
             if (snapshot.connectionState == ConnectionState.done) {
               return PageView(
                 scrollDirection: Axis.horizontal,
+                controller: _pageController,
                 children: [
+                  Container(
+                    padding: EdgeInsets.only(
+                      top: 100,
+                      left: 20,
+                      right: 20,
+                      bottom: 0,
+                    ),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'spielverlauf',
+                                textScaleFactor: 2.0,
+                                style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Expanded(
+                            child: ListView.builder(
+                                itemCount: finishedGameList.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  String targetUserId = finishedGameList[index]['otherPlayer'];
+                                  return Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(targetUserId),
+                                      IconButton(
+                                        icon: Icon(Icons.arrow_forward),
+                                        onPressed: () =>  {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => GameRoomPage(
+                                                user: user,
+                                                opponent: targetUserId,
+                                                userGameId: finishedGameList[index]['gameId']
+                                              ),
+                                            ),
+                                          ),
+                                        }
+                                      ),
+                                    ],
+                                  );
+                                }),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   Container(
                     padding: EdgeInsets.only(
                       top: MediaQuery.of(context).padding.top + 50,

@@ -8,13 +8,14 @@ import 'model/game.dart';
 import 'model/spektrum_user.dart';
 
 class GameRoomPage extends StatefulWidget {
-  GameRoomPage({Key key, this.user, this.opponent}) : super(key: key);
+  GameRoomPage({Key key, this.user, this.opponent, this.userGameId}) : super(key: key);
 
   final SpektrumUser user;
   final String opponent;
+  final int userGameId;
 
   @override
-  _GameRoomPageState createState() => _GameRoomPageState(user: user, opponentId: opponent);
+  _GameRoomPageState createState() => _GameRoomPageState(user: user, opponentId: opponent, userGameId: userGameId);
 }
 
 class _GameRoomPageState extends State<GameRoomPage> {
@@ -22,13 +23,14 @@ class _GameRoomPageState extends State<GameRoomPage> {
   Future dataLoaded;
 
   SpektrumUser user;
+  int userGameId;
   String opponentId;
   SpektrumUser opponent;
   Game userGame;
   Game opponentGame;
 
 
-  _GameRoomPageState({this.user, this.opponentId});
+  _GameRoomPageState({this.user, this.opponentId, this.userGameId});
 
   @override
   void initState() {
@@ -51,8 +53,14 @@ class _GameRoomPageState extends State<GameRoomPage> {
   }
 
   Future setPreGameData() async {
-    final Map<String, dynamic> body = {'opponentId': this.opponentId};
-    Map<String, dynamic> json = await SocketConnection.send('view_pre_game_page', body);
+    Map<String, dynamic> json;
+    if (this.userGameId != null) {
+      final Map<String, dynamic> body = {'gameId': this.userGameId};
+      json = await SocketConnection.send('view_history_game_page', body);
+    } else {
+      final Map<String, dynamic> body = {'opponentId': this.opponentId};
+      json = await SocketConnection.send('view_pre_game_page', body);
+    }
 
     this.opponent = SpektrumUser.fromJson(json['opponent']);
     this.userGame = Game.fromJson(json['userGame']);
@@ -138,7 +146,10 @@ class _GameRoomPageState extends State<GameRoomPage> {
   }
 
   ElevatedButton getGameRoomActionButton() {
-    if (userGame.isFinished && opponentGame.isFinished) {
+    if (this.userGameId != null) {
+      return ElevatedButton(
+          onPressed: () => onStartGame(userGame.gameId), child: Text('ergebnis anzeigen'));
+    } else if (userGame.isFinished && opponentGame.isFinished) {
       return ElevatedButton(
           onPressed: () {
             user.sendChallenge(opponentId);
