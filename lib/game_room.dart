@@ -5,6 +5,7 @@ import 'package:spektrum/game.dart';
 import 'package:spektrum/socket_connection.dart';
 
 import 'model/game.dart';
+import 'model/image.dart';
 import 'model/spektrum_user.dart';
 
 class GameRoomPage extends StatefulWidget {
@@ -19,7 +20,6 @@ class GameRoomPage extends StatefulWidget {
 }
 
 class _GameRoomPageState extends State<GameRoomPage> {
-
   Future dataLoaded;
 
   SpektrumUser user;
@@ -28,7 +28,6 @@ class _GameRoomPageState extends State<GameRoomPage> {
   SpektrumUser opponent;
   Game userGame;
   Game opponentGame;
-
 
   _GameRoomPageState({this.user, this.opponentId, this.userGameId});
 
@@ -67,7 +66,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
     this.opponentGame = Game.fromJson(json['opponentGame']);
   }
 
-  void handleResultStored(dynamic json)  {
+  void handleResultStored(dynamic json) {
     if (this.opponent.userId == json['userId']) {
       this.setState(() {
         this.opponentGame.totalDistance += json['distance'];
@@ -75,7 +74,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
     }
   }
 
-  void handleOwnResultStored(dynamic json)  {
+  void handleOwnResultStored(dynamic json) {
     if (this.opponent.userId == json['targetUserId']) {
       this.setState(() {
         this.userGame.totalDistance += json['distance'];
@@ -96,9 +95,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (context) => GamePage(
-                gameId: gameId
-              ),
+        builder: (context) => GamePage(gameId: gameId),
       ),
     );
   }
@@ -147,8 +144,7 @@ class _GameRoomPageState extends State<GameRoomPage> {
 
   ElevatedButton getGameRoomActionButton() {
     if (this.userGameId != null) {
-      return ElevatedButton(
-          onPressed: () => onStartGame(userGame.gameId), child: Text('ergebnis anzeigen'));
+      return ElevatedButton(onPressed: () => onStartGame(userGame.gameId), child: Text('ergebnis anzeigen'));
     } else if (userGame.isFinished && opponentGame.isFinished) {
       return ElevatedButton(
           onPressed: () {
@@ -157,131 +153,153 @@ class _GameRoomPageState extends State<GameRoomPage> {
           },
           child: Text('erneut herausfordern'));
     } else {
-      return ElevatedButton(
-          onPressed: () => onStartGame(userGame.gameId), child: Text('spielen'));
+      return ElevatedButton(onPressed: () => onStartGame(userGame.gameId), child: Text('spielen'));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: IconButton(
-        icon: Icon(Icons.arrow_back),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.miniStartTop,
-      body: FutureBuilder(
-        future: dataLoaded,
-        builder: (BuildContext context, AsyncSnapshot snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(top: 100),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+        floatingActionButton: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.miniStartTop,
+        body: FutureBuilder(
+          future: dataLoaded,
+          builder: (BuildContext context, AsyncSnapshot snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(top: 100),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            FutureBuilder(
+                                future: PoliticianImage.getPoliticianImageAndCopyright(user.profileImageId),
+                                builder: (BuildContext context, AsyncSnapshot snapshot) {
+                                  Widget icon;
+                                  if (snapshot.connectionState == ConnectionState.done) {
+                                    icon = ClipRRect(
+                                      borderRadius: BorderRadius.circular(200.0),
+                                      child: snapshot.data['image'],
+                                    );
+                                  } else {
+                                    icon = Icon(
+                                      Icons.person_pin,
+                                      size: 65,
+                                    );
+                                  }
+                                  return IconButton(
+                                    tooltip: snapshot.data['copyright'],
+                                    icon: ClipRRect(
+                                      borderRadius: BorderRadius.circular(200.0),
+                                      child: icon,
+                                    ),
+                                    iconSize: 50,
+                                    onPressed: null,
+                                  );
+                                }),
+                            user.userName != null
+                                ? SizedBox(
+                                    width: 100.0,
+                                    child: Center(
+                                      child: Text(
+                                        user.userName,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                : SizedBox(
+                                    width: 100.0,
+                                    child: Center(
+                                      child: Text(
+                                        user.userId,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                            getDistanceIndicator(user.userId, userGame.totalDistance),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            FutureBuilder(
+                                future: PoliticianImage.getPoliticianImageAndCopyright(opponent.profileImageId),
+                                builder: (BuildContext context, AsyncSnapshot snapshot) {
+                                  Widget icon;
+                                  if (snapshot.connectionState == ConnectionState.done) {
+                                    icon = ClipRRect(
+                                      borderRadius: BorderRadius.circular(200.0),
+                                      child: snapshot.data['image'],
+                                    );
+                                  } else {
+                                    icon = Icon(
+                                      Icons.person_pin,
+                                      size: 65,
+                                    );
+                                  }
+                                  return IconButton(
+                                    tooltip: snapshot.data['copyright'],
+                                    icon: ClipRRect(
+                                      borderRadius: BorderRadius.circular(200.0),
+                                      child: icon,
+                                    ),
+                                    iconSize: 50,
+                                    onPressed: null,
+                                  );
+                                }),
+                            opponent.userName != null
+                                ? SizedBox(
+                                    width: 100.0,
+                                    child: Center(
+                                      child: Text(
+                                        opponent.userName,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                : SizedBox(
+                                    width: 100.0,
+                                    child: Center(
+                                      child: Text(
+                                        opponent.userId,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                            getDistanceIndicator(opponent.userId, opponentGame.totalDistance),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Column(
-                        children: [
-                          user.profileImageId != null
-                              ? IconButton(
-                            icon: ClipRRect(
-                              borderRadius: BorderRadius.circular(200.0),
-                              child: Image.asset('assets/portrait_id/${user.profileImageId}.jpg'),
-                            ),
-                            iconSize: 50,
-                            onPressed: null,
-                          )
-                              : Icon(
-                            Icons.person_pin,
-                            size: 65,
-                          ),
-                          user.userName != null
-                              ? SizedBox(
-                            width: 100.0,
-                            child: Center(
-                              child: Text(
-                                user.userName,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                              : SizedBox(
-                            width: 100.0,
-                            child: Center(
-                              child: Text(
-                                user.userId,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                          getDistanceIndicator(user.userId, userGame.totalDistance),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          opponent.profileImageId != null
-                              ? IconButton(
-                            icon: ClipRRect(
-                              borderRadius: BorderRadius.circular(200.0),
-                              child: Image.asset('assets/portrait_id/${opponent.profileImageId}.jpg'),
-                            ),
-                            iconSize: 50,
-                            onPressed: null,
-                          )
-                              : Icon(
-                            Icons.person_pin,
-                            size: 65,
-                          ),
-                          opponent.userName != null
-                              ? SizedBox(
-                            width: 100.0,
-                            child: Center(
-                              child: Text(
-                                opponent.userName,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                              : SizedBox(
-                            width: 100.0,
-                            child: Center(
-                              child: Text(
-                                opponent.userId,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                          getDistanceIndicator(opponent.userId, opponentGame.totalDistance),
-                        ],
-                      ),
+                      getGameRoomActionButton(),
                     ],
                   ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    getGameRoomActionButton(),
-                  ],
-                ),
-              ],
-            );
-          } else {
-            return Scaffold(
-              body: Center(
-                child: Container(
-                  child: Text(
-                    'spektrum',
-                    textScaleFactor: 3,
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                ],
+              );
+            } else {
+              return Scaffold(
+                body: Center(
+                  child: Container(
+                    child: Text(
+                      'spektrum',
+                      textScaleFactor: 3,
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                    ),
                   ),
                 ),
-              ),
-            );
-          }
-        },
-      )
-    );
+              );
+            }
+          },
+        ));
   }
 }

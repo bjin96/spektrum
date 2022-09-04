@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:spektrum/model/image.dart';
 import 'package:spektrum/socket_connection.dart';
 
 import 'authentication.dart';
@@ -145,24 +146,57 @@ class _ContactPageState extends State<ContactPage> {
           title: Text('profilbild wählen'),
           content: Container(
               width: 200,
-              child: GridView.count(
+              child: GridView.builder(
+
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                ),
                 shrinkWrap: true,
-                crossAxisCount: 3,
-                children: List.generate(speakerIdList.length, (index) => IconButton(
-                  iconSize: MediaQuery.of(context).size.width / 3,
-                  onPressed: () async {
-                    await user.changeProfileImageId(speakerIdList[index]);
-                    Navigator.of(context).pop();
-                    setStateParent(() => user.profileImageId = speakerIdList[index]);
-                  },
-                  icon: ClipRRect(
-                    borderRadius: BorderRadius.circular(200.0),
-                    child: Image.asset('assets/portrait_id/${speakerIdList[index]}.jpg'),
-                  ),
-                )),
+                itemCount: speakerIdList.length,
+                itemBuilder: (BuildContext ctx, index) {
+                  return FutureBuilder(
+                      future: PoliticianImage.getPoliticianImageAndCopyright(speakerIdList[index]),
+                      builder: (BuildContext context, AsyncSnapshot snapshot) {
+                        if (snapshot.connectionState == ConnectionState.done) {
+                          return IconButton(
+                            iconSize: MediaQuery
+                                .of(context)
+                                .size
+                                .width / 3,
+                            tooltip: snapshot.data['copyright'],
+                            onPressed: () async {
+                              await user.changeProfileImageId(speakerIdList[index]);
+                              Navigator.of(context).pop();
+                              setStateParent(() => user.profileImageId = speakerIdList[index]);
+                            },
+                            icon: ClipRRect(
+                              borderRadius: BorderRadius.circular(200.0),
+                              child: snapshot.data['image'],
+                            ),
+                          );
+                        } else {
+                          return IconButton(
+                            iconSize: MediaQuery
+                                .of(context)
+                                .size
+                                .width / 3,
+                            onPressed: () async {
+                              await user.changeProfileImageId(speakerIdList[index]);
+                              Navigator.of(context).pop();
+                              setStateParent(() => user.profileImageId = speakerIdList[index]);
+                            },
+                            icon: Icon(
+                              Icons.person_pin,
+                              size: 65,
+                            ),
+                          );
+                        }
+                      }
+                    );
+                  }
+                ),
               )
-          ),
-        );
+          );
       }
     );
   }
@@ -505,55 +539,74 @@ class _ContactPageState extends State<ContactPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              PopupMenuButton<MenuOption>(
-                                offset: Offset(-MediaQuery.of(context).size.width / 5, MediaQuery.of(context).size.width / 6),
-                                icon: user.profileImageId == null ? Icon(Icons.person_pin) : ClipRRect(
-                                  borderRadius: BorderRadius.circular(200.0),
-                                  child: Image.asset('assets/portrait_id/${user.profileImageId}.jpg'),
-                                ),
-                                iconSize: MediaQuery.of(context).size.width / 6,
-                                onSelected: (MenuOption selected) {
-                                  selected.action(context, this, user, speakerIdList);
-                                },
-                                itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuOption>>[
-                                  PopupMenuItem(
-                                    value: MenuOption.profileImage,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        IconButton(
-                                          onPressed: null,
-                                          icon: user.profileImageId == null ? Icon(Icons.person_pin) : ClipRRect(
-                                            borderRadius: BorderRadius.circular(200.0),
-                                            child: Image.asset('assets/portrait_id/${user.profileImageId}.jpg'),
+                              FutureBuilder(
+                                  future: PoliticianImage.getPoliticianImageAndCopyright(user.profileImageId),
+                                  builder: (BuildContext context, AsyncSnapshot snapshot) {
+                                    Widget icon;
+                                    String copyright;
+                                    if (snapshot.connectionState == ConnectionState.done) {
+                                      icon = ClipRRect(
+                                          borderRadius: BorderRadius.circular(200.0),
+                                          child: snapshot.data['image'],
+                                      );
+                                      copyright = snapshot.data['copyright'];
+                                    } else {
+                                      icon = Icon(
+                                        Icons.person_pin,
+                                        size: 65,
+                                      );
+                                      copyright = 'Copyright loading...';
+                                    }
+                                    return PopupMenuButton<MenuOption>(
+                                      offset: Offset(-MediaQuery.of(context).size.width / 5, MediaQuery.of(context).size.width / 6),
+                                      icon: icon,
+                                      tooltip: copyright,
+                                      iconSize: MediaQuery.of(context).size.width / 6,
+                                      onSelected: (MenuOption selected) {
+                                        selected.action(context, this, user, speakerIdList);
+                                      },
+                                      itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuOption>>[
+                                        PopupMenuItem(
+                                          value: MenuOption.profileImage,
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              IconButton(
+                                                onPressed: null,
+                                                tooltip: copyright,
+                                                icon: user.profileImageId == null ? Icon(Icons.person_pin) : ClipRRect(
+                                                  borderRadius: BorderRadius.circular(200.0),
+                                                  child: icon,
+                                                ),
+                                                iconSize: 40,
+                                              ),
+                                              Icon(Icons.edit_rounded),
+                                            ],
                                           ),
-                                          iconSize: 40,
                                         ),
-                                        Icon(Icons.edit_rounded),
+                                        PopupMenuItem(
+                                          value: MenuOption.userName,
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(user.userName),
+                                              Icon(Icons.edit_rounded),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuItem(
+                                          value: MenuOption.logOut,
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text('abmelden'),
+                                              Icon(Icons.login_rounded),
+                                            ],
+                                          ),
+                                        ),
                                       ],
-                                    ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: MenuOption.userName,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(user.userName),
-                                        Icon(Icons.edit_rounded),
-                                      ],
-                                    ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: MenuOption.logOut,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text('abmelden'),
-                                        Icon(Icons.login_rounded),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                    );
+                                  }
                               ),
                             ],
                           ),

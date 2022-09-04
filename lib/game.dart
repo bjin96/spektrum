@@ -8,6 +8,7 @@ import 'package:spektrum/socket_connection.dart';
 
 import 'model/excerpt.dart';
 import 'model/game.dart';
+import 'model/image.dart';
 
 const Map<String, Color> PARTY_COLOR = {
   'SPD': Color(0xffe2010f),
@@ -449,57 +450,77 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                   Visibility(
                     child: Column(
                       children: [
-                        IconButton(
-                          iconSize: 75,
-                          icon: ClipRRect(
-                            borderRadius: BorderRadius.circular(200.0),
-                            child: Image.asset('assets/portrait_id/${excerpt.speakerId}.jpg'),
-                          ),
-                          onPressed: () {
-                            return showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  backgroundColor: PARTY_COLOR[excerpt.party],
-                                  content: Container(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          iconSize: 75,
-                                          icon: ClipRRect(
-                                            borderRadius: BorderRadius.circular(200.0),
-                                            child: Image.asset('assets/portrait_id/${excerpt.speakerId}.jpg'),
+                        FutureBuilder(
+                          future: PoliticianImage.getPoliticianImageAndCopyright(excerpt.speakerId),
+                          builder: (BuildContext context, AsyncSnapshot snapshot) {
+                            Widget icon;
+                            String copyright;
+                            if (snapshot.connectionState == ConnectionState.done) {
+                              icon = snapshot.data['image'];
+                              copyright = snapshot.data['copyright'];
+                            } else {
+                              icon = Icon(
+                                Icons.person_pin,
+                                size: 65,
+                              );
+                              copyright = 'Loading copyright...';
+                            }
+                            return
+                              IconButton(
+                                iconSize: 75,
+                                icon: ClipRRect(
+                                  borderRadius: BorderRadius.circular(200.0),
+                                  child: icon,
+                                ),
+                                tooltip: copyright,
+                                onPressed: () {
+                                  return showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        backgroundColor: PARTY_COLOR[excerpt.party],
+                                        content: Container(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                iconSize: 75,
+                                                tooltip: snapshot.data['copyright'],
+                                                icon: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(200.0),
+                                                  child: icon,
+                                                ),
+                                                onPressed: null,
+                                              ),
+                                              Center(
+                                                child: Padding(
+                                                  padding: EdgeInsets.only(bottom: 20),
+                                                  child: Text(
+                                                    '${excerpt.speakerFirstName} ${excerpt.speakerLastName} (${excerpt.party})',
+                                                    style: TextStyle(
+                                                        color: excerpt.party == 'FDP' ? Colors.black : Colors.white),
+                                                  ),
+                                                ),
+                                              ),
+                                              Flexible(
+                                                child: SingleChildScrollView(
+                                                  child: Text(
+                                                    excerpt.bio != null ? excerpt.bio : '',
+                                                    textScaleFactor: 0.8,
+                                                    style: TextStyle(
+                                                        color: excerpt.party == 'FDP' ? Colors.black : Colors.white),
+                                                  ),
+                                                ),
+                                              )
+                                            ],
                                           ),
-                                          onPressed: null,
                                         ),
-                                        Center(
-                                          child: Padding(
-                                            padding: EdgeInsets.only(bottom: 20),
-                                            child: Text(
-                                              '${excerpt.speakerFirstName} ${excerpt.speakerLastName} (${excerpt.party})',
-                                              style: TextStyle(
-                                                  color: excerpt.party == 'FDP' ? Colors.black : Colors.white),
-                                            ),
-                                          ),
-                                        ),
-                                        Flexible(
-                                          child: SingleChildScrollView(
-                                            child: Text(
-                                              excerpt.bio != null ? excerpt.bio : '',
-                                              textScaleFactor: 0.8,
-                                              style: TextStyle(
-                                                  color: excerpt.party == 'FDP' ? Colors.black : Colors.white),
-                                            ),
-                                          ),
-                                        )
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                          }
                         ),
                         Text(
                           '${excerpt.speakerFirstName} ${excerpt.speakerLastName} (${excerpt.party})',

@@ -49,7 +49,6 @@ dev_dependencies:
 # The following section is specific to Flutter.
 flutter:
   assets:
-    - assets/portrait_id/
     - assets/icons/
     - assets/config.yaml
   fonts:
