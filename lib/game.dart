@@ -485,7 +485,7 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                                             children: [
                                               IconButton(
                                                 iconSize: 75,
-                                                tooltip: snapshot.data['copyright'],
+                                                tooltip: copyright,
                                                 icon: ClipRRect(
                                                   borderRadius: BorderRadius.circular(200.0),
                                                   child: icon,

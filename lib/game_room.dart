@@ -183,19 +183,22 @@ class _GameRoomPageState extends State<GameRoomPage> {
                                 future: PoliticianImage.getPoliticianImageAndCopyright(user.profileImageId),
                                 builder: (BuildContext context, AsyncSnapshot snapshot) {
                                   Widget icon;
+                                  String tooltip;
                                   if (snapshot.connectionState == ConnectionState.done) {
+                                    tooltip = snapshot.data['copyright'];
                                     icon = ClipRRect(
                                       borderRadius: BorderRadius.circular(200.0),
                                       child: snapshot.data['image'],
                                     );
                                   } else {
+                                    tooltip = 'No data available.';
                                     icon = Icon(
                                       Icons.person_pin,
                                       size: 65,
                                     );
                                   }
                                   return IconButton(
-                                    tooltip: snapshot.data['copyright'],
+                                    tooltip: tooltip,
                                     icon: ClipRRect(
                                       borderRadius: BorderRadius.circular(200.0),
                                       child: icon,
@@ -232,19 +235,22 @@ class _GameRoomPageState extends State<GameRoomPage> {
                                 future: PoliticianImage.getPoliticianImageAndCopyright(opponent.profileImageId),
                                 builder: (BuildContext context, AsyncSnapshot snapshot) {
                                   Widget icon;
+                                  String tooltip;
                                   if (snapshot.connectionState == ConnectionState.done) {
+                                    tooltip = snapshot.data['copyright'];
                                     icon = ClipRRect(
                                       borderRadius: BorderRadius.circular(200.0),
                                       child: snapshot.data['image'],
                                     );
                                   } else {
+                                    tooltip = 'No data available.';
                                     icon = Icon(
                                       Icons.person_pin,
                                       size: 65,
                                     );
                                   }
                                   return IconButton(
-                                    tooltip: snapshot.data['copyright'],
+                                    tooltip: tooltip,
                                     icon: ClipRRect(
                                       borderRadius: BorderRadius.circular(200.0),
                                       child: icon,
